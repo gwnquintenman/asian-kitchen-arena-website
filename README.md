@@ -7,6 +7,8 @@ Werkt eerst op de telefoon, daarna ook op tablet en computer.
 - **Preview:** https://gwnquintenman.github.io/asian-kitchen-arena-website/
   (alleen om te bekijken; komt niet in Google)
 - **Kant-en-klare website:** de map `site/`. Dit is wat op de hosting moet.
+- **Downloadpakketten** (map `pakket/`): `upload-naar-hosting-Arena.zip` (alleen de website) en
+  `asian-kitchen-arena-website-bronbestanden.zip` (alles, ook de bronbestanden).
 
 Er is geen online bestellen, winkelmandje, betalen, bezorgen, reserveren of inloggen.
 Bestellen gaat met de knop **Bel om te bestellen** (`tel:+31203657971`).
