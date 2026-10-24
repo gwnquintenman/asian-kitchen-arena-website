@@ -1,6 +1,6 @@
 # Website Asian Kitchen Arena
 
-Nieuwe website voor Asian Kitchen Arena (Arena Boulevard 81, Amsterdam): menu, telefonisch
+Nieuwe website voor Asian Kitchen Arena (Johan Cruijff Boulevard 81, Amsterdam): menu, telefonisch
 bestellen, afhalen, allergenen, adres en openingstijden. In het Nederlands en Engels.
 Werkt eerst op de telefoon, daarna ook op tablet en computer.
 
@@ -73,20 +73,16 @@ Komt de site op een ander adres dan `https://www.asiankitchen.nl/Arena/`? Pas da
 
 ## Nog te bevestigen
 
-1. **Straatnaam.** De Arena Boulevard heet sinds ongeveer 2020 officieel Johan Cruijff Boulevard,
-   en Google Maps kent de zaak als "Johan Cruijff Boulevard 81, 1101 DL". De site gebruikt nu
-   "Arena Boulevard 81" zoals opgegeven. De routeknop vindt de zaak wel goed. Kies welke naam
-   op de site moet (aanpassen in `content/gegevens.mjs`).
-2. **Allergenen per gerecht.** Er is geen gecontroleerde lijst. De site zegt daarom per gerecht
+1. **Allergenen per gerecht.** Er is geen gecontroleerde lijst. De site zegt daarom per gerecht
    dat de lijst nog niet gecontroleerd is, met een belknop. Het concept van de oude website
    staat in `bron/allergenen-oude-website.md` (onvolledig: o.a. oestersaus en Gong Bao nalopen).
-3. **Frisdrankprijs.** Op de pdf staat € 3,50 alleen naast Coca-Cola, met Sprite tot en met Spa
+2. **Frisdrankprijs.** Op de pdf staat € 3,50 alleen naast Coca-Cola, met Sprite tot en met Spa
    eronder. De site toont de hele groep voor € 3,50 (zoals de oude site: "frisdrank € 3,50").
-4. **Overige voorgerechten.** Alleen de 5 bites van de pdf staan erop (9, 11, 12, 13, 14).
+3. **Overige voorgerechten.** Alleen de 5 bites van de pdf staan erop (9, 11, 12, 13, 14).
    Zijn er meer voorgerechten, lever ze dan aan.
-5. **Beschrijvingen** van 7, 15, 17, 18 en 41 (wonton met varkensvlees, saus van de chef,
+4. **Beschrijvingen** van 7, 15, 17, 18 en 41 (wonton met varkensvlees, saus van de chef,
    char siu en garnalen) komen van de oude website. Even nalezen of het nog klopt.
-6. **Kleine details:** zit er saus bij de saté en loempia's; welk merk bier; glas of fles wijn;
+5. **Kleine details:** zit er saus bij de saté en loempia's; welk merk bier; glas of fles wijn;
    mag het mobiele nummer of e-mailadres van de oude site erop (nu bewust weggelaten).
-7. **Foto's.** Er zijn 6 echte gerechtfoto's. Meer eigen foto's (en een recente foto van de
+6. **Foto's.** Er zijn 6 echte gerechtfoto's. Meer eigen foto's (en een recente foto van de
    gevel) maken het nog herkenbaarder.

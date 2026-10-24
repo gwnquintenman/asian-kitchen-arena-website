@@ -11,13 +11,15 @@ export default {
   },
 
   adres: {
-    straat: 'Arena Boulevard 81',
+    straat: 'Johan Cruijff Boulevard 81',
     postcode: '1101 DL',
     plaats: 'Amsterdam',
+    // oude straatnaam, klein onder het adres zodat bezoekers het herkennen (null = weglaten)
+    voorheen: { nl: 'voorheen Arena Boulevard', en: 'formerly Arena Boulevard' },
   },
 
   // Routeknop: opent Google Maps met een route naar het adres.
-  routeLink: 'https://www.google.com/maps/dir/?api=1&destination=Asian+Kitchen%2C+Arena+Boulevard+81%2C+1101+DL+Amsterdam',
+  routeLink: 'https://www.google.com/maps/dir/?api=1&destination=Asian+Kitchen%2C+Johan+Cruijff+Boulevard+81%2C+1101+DL+Amsterdam',
 
   // Openingstijden. Dagen: ma di wo do vr za zo. Tijden als 'uu:mm'.
   openingstijden: [

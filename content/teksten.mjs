@@ -5,12 +5,12 @@
 export default {
   meta: {
     titel: {
-      nl: 'Asian Kitchen Arena – Aziatisch eten afhalen aan de Arena Boulevard',
-      en: 'Asian Kitchen Arena – Asian takeaway on Arena Boulevard, Amsterdam',
+      nl: 'Asian Kitchen Arena – Aziatisch eten afhalen aan de Johan Cruijff Boulevard',
+      en: 'Asian Kitchen Arena – Asian takeaway on Johan Cruijff Boulevard, Amsterdam',
     },
     beschrijving: {
-      nl: 'Noedels, nasi, wokgerechten en soep om af te halen aan de Arena Boulevard 81 in Amsterdam. Bekijk het menu en bel {telefoon} om te bestellen.',
-      en: 'Noodles, fried rice, wok dishes and soup to take away at Arena Boulevard 81, Amsterdam. See the menu and call {telefoon} to order.',
+      nl: 'Noedels, nasi, wokgerechten en soep om af te halen aan de Johan Cruijff Boulevard 81 in Amsterdam. Bekijk het menu en bel {telefoon} om te bestellen.',
+      en: 'Noodles, fried rice, wok dishes and soup to take away at Johan Cruijff Boulevard 81, Amsterdam. See the menu and call {telefoon} to order.',
     },
   },
 
@@ -34,8 +34,8 @@ export default {
   intro: {
     titel: { nl: 'Aziatisch eten om af te halen', en: 'Asian food to take away' },
     lead: {
-      nl: 'Noedels, nasi en wokgerechten aan de Arena Boulevard. Vers bereid, met veel groenten, en snel klaar. Handig vóór een concert, wedstrijd of ander evenement.',
-      en: 'Noodles, fried rice and wok dishes on Arena Boulevard. Freshly made, with plenty of vegetables, and ready fast. Handy before a concert, match or other event.',
+      nl: 'Noedels, nasi en wokgerechten aan de Johan Cruijff Boulevard. Vers bereid, met veel groenten, en snel klaar. Handig vóór een concert, wedstrijd of ander evenement.',
+      en: 'Noodles, fried rice and wok dishes on Johan Cruijff Boulevard. Freshly made, with plenty of vegetables, and ready fast. Handy before a concert, match or other event.',
     },
     feiten: {
       nl: ['Telefonisch bestellen, zelf ophalen', 'Alle kip is halal'],

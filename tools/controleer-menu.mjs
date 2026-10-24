@@ -96,9 +96,9 @@ for (const taal of ['nl', 'en']) {
   const tel = [...html.matchAll(/href="tel:([^"]+)"/g)].map((m) => m[1]);
   if (!tel.length || tel.some((t) => t !== '+31203657971')) fout(`[${taal}] verkeerde tel-link: ${[...new Set(tel)]}`);
   if (!html.includes('020 365 7971')) fout(`[${taal}] telefoonnummer 020 365 7971 ontbreekt`);
-  if (!html.includes('Arena Boulevard 81') || !html.includes('1101 DL')) fout(`[${taal}] adres ontbreekt`);
+  if (!html.includes('Johan Cruijff Boulevard 81') || !html.includes('1101 DL')) fout(`[${taal}] adres ontbreekt`);
   const route = html.match(/href="(https:\/\/www\.google\.com\/maps\/dir\/[^"]+)"/);
-  if (!route || !decodeURIComponent(route[1].replace(/\+/g, ' ')).includes('Arena Boulevard 81, 1101 DL Amsterdam')) fout(`[${taal}] routelink klopt niet`);
+  if (!route || !decodeURIComponent(route[1].replace(/\+/g, ' ')).includes('Johan Cruijff Boulevard 81, 1101 DL Amsterdam')) fout(`[${taal}] routelink klopt niet`);
   for (const [dag, tijd] of Object.entries(TIJDEN)) {
     const rij = html.match(new RegExp(`<tr data-dag="${dag}">[\\s\\S]*?</tr>`));
     if (!rij || !rij[0].includes(tijd)) fout(`[${taal}] openingstijd ${dag} is niet ${tijd}`);

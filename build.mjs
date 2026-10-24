@@ -343,7 +343,7 @@ function ophalenHtml(taal) {
   <div class="ophalen__grid">
     <div class="ophalen__blok">
       <h3>${esc(o.adresTitel[taal])}</h3>
-      <p class="adres">${esc(gegevens.naam)}<br>${esc(gegevens.adres.straat)}<br>${esc(gegevens.adres.postcode)} ${esc(gegevens.adres.plaats)}</p>
+      <p class="adres">${esc(gegevens.naam)}<br>${esc(gegevens.adres.straat)}<br>${esc(gegevens.adres.postcode)} ${esc(gegevens.adres.plaats)}${gegevens.adres.voorheen ? `<span class="adres__voorheen">(${esc(gegevens.adres.voorheen[taal])})</span>` : ''}</p>
       <a class="btn btn--rand" href="${gegevens.routeLink}" target="_blank" rel="noopener">${icon.pin}<span>${esc(teksten.routeKnopLang[taal])}</span></a>
       <p class="ophalen__noot">${esc(o.evenement[taal])}</p>
     </div>
@@ -484,7 +484,7 @@ ${PREVIEW ? '<meta name="robots" content="noindex, nofollow">\n' : ''}<link rel=
       <ul class="intro__feiten">${feiten}</ul>
       <p class="intro__info">
         <span class="intro__tijd" data-vandaag>${esc(tijdenKort(taal))}</span>
-        <span class="intro__adres">${esc(gegevens.adres.straat)}, ${esc(gegevens.adres.plaats)} · <a href="${gegevens.routeLink}" target="_blank" rel="noopener">${esc(teksten.routeKnop[taal])}</a></span>
+        <span class="intro__adres">${esc(gegevens.adres.straat)}, ${esc(gegevens.adres.plaats)} <span class="intro__route">· <a href="${gegevens.routeLink}" target="_blank" rel="noopener">${esc(teksten.routeKnop[taal])}</a></span></span>
       </p>
     </div>
     <img class="intro__foto" src="${pre}images/afhaalbox-760.webp" srcset="${pre}images/afhaalbox-440.webp 440w, ${pre}images/afhaalbox-760.webp 760w" sizes="(min-width: 900px) 380px, 46vw" width="760" height="731" alt="${esc(intro.fotoAlt[taal])}" fetchpriority="high">

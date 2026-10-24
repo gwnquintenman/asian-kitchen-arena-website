@@ -366,6 +366,9 @@ a:hover {
 .intro__tijd {
   color: var(--inkt);
 }
+.intro__route {
+  white-space: nowrap;
+}
 .intro__info a {
   display: inline-block;
   padding: 0.35rem 0;
@@ -851,6 +854,11 @@ a:hover {
 .adres {
   font-size: 1.1rem;
   margin-bottom: 0.8rem;
+}
+.adres__voorheen {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--grijs);
 }
 .ophalen__noot {
   margin-top: 0.8rem;
