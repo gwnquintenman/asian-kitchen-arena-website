@@ -159,27 +159,24 @@
   volgHash(location.hash, true);
 
   // ---------- foto's bewegen mee met het scrollen ----------
-  // Diepte: de voorste doosjes gaan sneller omhoog dan de pagina, het bord blijft iets achter en draait mee.
-  // We meten de houder (die zelf niet beweegt) en zetten alleen 'transform' op de foto.
+  // Bovenaan: alle drie de gerechten gaan mee omhoog, de doosjes iets sneller dan het bord (diepte), en het bord
+  // draait langzaam. We meten de houder (die zelf niet beweegt) en zetten alleen 'transform' op de foto.
   // px / draai = verschuiving en graden per schermhoogte gescrold. Bij het laden staat alles op 0.
   var lagen = [];
   var heroFotos = document.querySelector('.hero__fotos');
   if (heroFotos) {
     [
       // selector, px (breed scherm), px (smal scherm), draai, draai van alleen de foto (het bord draait, het
-      // Nr.-rondje niet). Op een smal scherm staan de foto's ONDER de tekst: daar blijft nr. 40 (bovenaan) juist
-      // achter, zodat geen enkele foto over de tekst schuift; nr. 39 heeft ruimte en gaat omhoog.
-      ['.hf--40', 240, -50, -10, 0],
-      ['.hf--22', -70, 30, 0, 30],
-      ['.hf--39', 360, 170, 12, 0],
+      // Nr.-rondje niet). Op een smal scherm staan de foto's ONDER de tekst: daar blijft nr. 40 (bovenaan)
+      // iets achter, zodat geen enkele foto over de tekst schuift.
+      ['.hf--40', 130, -40, -6, 0],
+      ['.hf--22', 50, 20, 0, 20],
+      ['.hf--39', 190, 110, 7, 0],
     ].forEach(function (l) {
       var el = heroFotos.querySelector(l[0]);
       if (el) lagen.push({ el: el, houder: heroFotos, px: l[1], pxSmal: l[2], draai: l[3], img: l[4] ? el.querySelector('img') : null, imgDraai: l[4] });
     });
   }
-  var bakje = document.querySelector('.afhalen__foto');
-  // het bakje staat recht als het midden in beeld is (de witte foto blijft zo binnen het witte vlak)
-  if (bakje) lagen.push({ el: bakje, houder: bakje.parentNode, px: 90, pxSmal: 40, draai: -8, vanafMidden: true });
 
   // positie van een houder t.o.v. het midden van het scherm: 0 = midden, 1 = onderkant, -1 = bovenkant
   function stand(r, vh) {
@@ -190,8 +187,23 @@
     var vh = window.innerHeight;
     lagen.forEach(function (l) {
       var r = l.houder.getBoundingClientRect();
-      l.d0 = l.vanafMidden ? 0 : Math.min(1, stand({ top: r.top + window.scrollY, height: r.height }, vh));
+      l.d0 = Math.min(1, stand({ top: r.top + window.scrollY, height: r.height }, vh));
     });
+  }
+
+  // Afhalen: het bakje schuift tijdens het scrollen van links (buiten beeld) naar zijn plek, licht gekanteld,
+  // en staat recht zodra het midden in beeld is. Terug scrollen = terug naar links.
+  var bakje = document.querySelector('.afhalen__foto');
+  function paginaBoven(el) {
+    // positie op de pagina zonder transform (offsetTop telt een transform niet mee)
+    var y = 0;
+    for (var e = el; e; e = e.offsetParent) y += e.offsetTop;
+    return y;
+  }
+  function paginaLinks(el) {
+    var x = 0;
+    for (var e = el; e; e = e.offsetParent) x += e.offsetLeft;
+    return x;
   }
 
   var gepland = false;
@@ -204,6 +216,10 @@
     var maten = lagen.map(function (l) {
       return l.houder.getBoundingClientRect();
     });
+    var bakjeBoven = bakje ? paginaBoven(bakje) - window.scrollY : 0;
+    var bakjeHoog = bakje ? bakje.offsetHeight : 0;
+    var bakjeAfstand = bakje ? paginaLinks(bakje) + bakje.offsetWidth + 40 : 0;
+
     lagen.forEach(function (l, i) {
       var r = maten[i];
       if (r.bottom < -300 || r.top > vh + 300) return;
@@ -212,6 +228,16 @@
         'translate3d(0,' + (delta * (smal ? l.pxSmal : l.px)).toFixed(1) + 'px,0) rotate(' + (delta * l.draai).toFixed(2) + 'deg)';
       if (l.img) l.img.style.transform = 'rotate(' + (delta * l.imgDraai).toFixed(2) + 'deg)';
     });
+
+    if (bakje && bakjeBoven < vh + 100 && bakjeBoven + bakjeHoog > -100) {
+      // 0 = bovenkant van het bakje komt net onderin beeld, 1 = midden van het bakje op 55 % van de schermhoogte
+      var start = vh;
+      var eind = vh * 0.55 - bakjeHoog / 2;
+      var p = Math.max(0, Math.min(1, (start - bakjeBoven) / (start - eind)));
+      var rest = Math.pow(1 - p, 3); // ease-out: snel binnen, rustig op zijn plek
+      bakje.style.transform =
+        'translate3d(' + (-rest * bakjeAfstand).toFixed(1) + 'px,0,0) rotate(' + (-rest * 14).toFixed(2) + 'deg)';
+    }
   }
   function plan() {
     if (!gepland) {
@@ -219,12 +245,16 @@
       requestAnimationFrame(beweeg);
     }
   }
-  if (lagen.length) {
+  if (lagen.length || bakje) {
     beginStand();
     window.addEventListener('scroll', plan, { passive: true });
     window.addEventListener('resize', function () {
       beginStand();
       plan();
+    });
+    // een ander menutabblad maakt de pagina langer of korter: dan staat het bakje ergens anders
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', plan);
     });
     beweeg();
   }
@@ -234,6 +264,7 @@
         l.el.style.transform = '';
         if (l.img) l.img.style.transform = '';
       });
+      if (bakje) bakje.style.transform = '';
     } else {
       beweeg();
     }
