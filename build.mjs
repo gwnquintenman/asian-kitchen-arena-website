@@ -101,9 +101,9 @@ function tijdenKort(taal) {
 // ---------- iconen (klein, inline, één stijl) ----------
 
 const icon = {
-  tel: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.2 15.2 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z" fill="currentColor"/></svg>',
-  pin: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="currentColor"/></svg>',
-  pijl: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v14m0 0-6-6m6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  tel: '<svg class="i i--tel" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.2 15.2 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z" fill="currentColor"/></svg>',
+  pin: '<svg class="i i--pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="currentColor"/></svg>',
+  pijl: '<svg class="i i--pijl" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v14m0 0-6-6m6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   peper: '<svg class="i i--peper" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 6.2c1.6.2 3 1.6 3.1 3.4.3 4.6-5.4 11-13.6 11.9-1 .1-1.2-1.1-.3-1.4 5.3-1.9 7.6-6.3 8.4-10.7.3-1.9 1.1-3.4 2.4-3.2z" fill="currentColor"/><path d="M16 6.3c.1-1.6.9-2.9 2.6-3.5" fill="none" stroke="#2f7a3b" stroke-width="1.8" stroke-linecap="round"/></svg>',
   blad: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4C9 4 4 9.5 4 16c0 1.4.3 2.6.8 3.6C7 13 11 10 15 8.5c-4 2.3-7 6-8.6 11.2 1 .5 2.1.8 3.4.8C16.5 20.5 20 14 20 4z" fill="currentColor"/></svg>',
   plus: '<svg class="i i--plus" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
@@ -295,8 +295,8 @@ function heroHtml(taal) {
     <h1 id="h-hero">${esc(h.titel[taal])}</h1>
     <p class="hero__lead">${esc(h.lead[taal])}</p>
     <div class="knoppen">
-      <a class="knop knop--rood" href="#menu">${esc(h.menuKnop[taal])}${icon.pijl}</a>
-      <a class="knop knop--lijn" href="${gegevens.telefoon.link}">${icon.tel}${esc(T(h.belKnop, taal))}</a>
+      <a class="knop veeg knop--rood" href="#menu">${esc(h.menuKnop[taal])}${icon.pijl}</a>
+      <a class="knop veeg knop--lijn" href="${gegevens.telefoon.link}">${icon.tel}${esc(T(h.belKnop, taal))}</a>
     </div>
     <ul class="hero__feiten">${feiten}</ul>
     <p class="hero__vandaag"><span data-vandaag>${esc(tijdenKort(taal))}</span> <span class="hero__route">· <a href="${gegevens.routeLink}" target="_blank" rel="noopener">${esc(h.route[taal])}</a></span></p>
@@ -344,7 +344,7 @@ function afhalenHtml(taal) {
     <ol class="stappen">${stappen}</ol>
     <p class="afhalen__noot">${esc(a.evenement[taal])}</p>
     ${buitenland}
-    <a class="knop knop--rood" href="${gegevens.telefoon.link}">${icon.tel}${esc(T(a.belKnop, taal))}</a>
+    <a class="knop veeg knop--rood" href="${gegevens.telefoon.link}">${icon.tel}${esc(T(a.belKnop, taal))}</a>
   </div>
 </div>
 </section>`;
@@ -370,7 +370,7 @@ function tijdenHtml(taal) {
     <div class="tijden__adres">
       <h3>${esc(t.adresTitel[taal])}</h3>
       <p class="adres">${esc(gegevens.naam)}<br>${esc(gegevens.adres.straat)}<br>${esc(gegevens.adres.postcode)} ${esc(gegevens.adres.plaats)}${voorheen}</p>
-      <a class="knop knop--lijn" href="${gegevens.routeLink}" target="_blank" rel="noopener">${icon.pin}${esc(t.routeKnop[taal])}</a>
+      <a class="knop veeg knop--lijn" href="${gegevens.routeLink}" target="_blank" rel="noopener">${icon.pin}${esc(t.routeKnop[taal])}</a>
       <h3 class="tijden__belkop">${esc(t.belTitel[taal])}</h3>
       <p class="tijden__tel"><a href="${gegevens.telefoon.link}" class="tel">${esc(gegevens.telefoon.weergave)}</a></p>
       ${taal === 'en' ? `<p class="tijden__noot">${metBelLink(T(teksten.afhalen.buitenland, taal))}</p>` : ''}
@@ -506,7 +506,7 @@ ${PREVIEW ? '<meta name="robots" content="noindex, nofollow">\n' : ''}<link rel=
       <a href="#goed-om-te-weten">${esc(n.weten[taal])}</a>
     </nav>
     <a class="kop__taal" href="${anderPad}" hreflang="${ander}" lang="${ander}"><span class="vh">${esc(teksten.taalWissel[taal])}: </span>${ander.toUpperCase()}</a>
-    <a class="kop__bel" href="${gegevens.telefoon.link}">${icon.tel}<span class="kop__bel-woord">${esc(teksten.belKort[taal])}</span><span class="kop__bel-nr">${esc(gegevens.telefoon.weergave)}</span></a>
+    <a class="kop__bel veeg" href="${gegevens.telefoon.link}">${icon.tel}<span class="kop__bel-woord">${esc(teksten.belKort[taal])}</span><span class="kop__bel-nr">${esc(gegevens.telefoon.weergave)}</span></a>
   </div>
 </header>
 
@@ -549,7 +549,7 @@ await mkdir(path.join(OUT, 'assets'), { recursive: true });
 const AFBEELDINGEN = [
   'woordmerk.png', 'logo-donker.png', 'favicon-48.png', 'apple-touch-icon.png', 'icon-512.png', 'deelafbeelding.jpg',
   'nr-22-groot.webp', 'nr-40-groot.webp', 'nr-39-groot.webp',
-  'nr-11.webp', 'nr-13.webp', 'nr-14.webp', 'nr-22.webp', 'nr-39.webp', 'nr-40.webp',
+  'nr-22.webp',
   'afhaalbox-440.webp', 'afhaalbox-760.webp',
 ];
 const LETTERS = ['barlow-condensed-700.woff2', 'barlow-400.woff2', 'barlow-600.woff2', 'OFL.txt'];

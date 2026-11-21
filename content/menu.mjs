@@ -170,12 +170,10 @@ export const categorieen = [
       gerecht('39', 12.5, 'Nasi met ei en groenten', 'Fried rice with egg & vegetables', {
         inhoud: { nl: 'Gebakken rijst met ei en gemengde groenten.', en: 'Fried rice with egg and mixed vegetables.' },
         labels: ['vegetarisch'],
-        foto: 'nr-39.webp',
       }),
       gerecht('40', 12.5, 'Noedels met ei en groenten', 'Noodles with egg & vegetables', {
         inhoud: { nl: 'Noedels met ei en gemengde groenten.', en: 'Noodles with egg and mixed vegetables.' },
         labels: ['vegetarisch'],
-        foto: 'nr-40.webp',
       }),
       gerecht('46', 16.0, 'Noedelsoep met groenten', 'Mixed vegetable noodle soup', {
         inhoud: { nl: 'Maaltijdsoep met noedels en gemengde groenten.', en: 'A meal-size soup with noodles and mixed vegetables.' },
@@ -197,7 +195,6 @@ export const categorieen = [
       gerecht('11', 6.0, 'Gestoomde kipdumplings (siu mai)', 'Steamed chicken dumplings (siu mai)', {
         inhoud: { nl: '4 stuks.', en: '4 pieces.' },
         labels: ['halal-kip'],
-        foto: 'nr-11.webp',
       }),
       gerecht('12', 6.0, 'Gefrituurde kipdumplings (siu mai)', 'Fried chicken dumplings (siu mai)', {
         inhoud: { nl: '4 stuks.', en: '4 pieces.' },
@@ -206,11 +203,9 @@ export const categorieen = [
       gerecht('13', 5.0, "Mini-loempia's", 'Mini spring rolls', {
         inhoud: { nl: '6 stuks.', en: '6 pieces.' },
         labels: ['vegetarisch'],
-        foto: 'nr-13.webp',
       }),
       gerecht('14', 5.5, 'Krokante garnalen', 'Crispy shrimp', {
         inhoud: { nl: '2 stuks.', en: '2 pieces.' },
-        foto: 'nr-14.webp',
       }),
     ],
   },

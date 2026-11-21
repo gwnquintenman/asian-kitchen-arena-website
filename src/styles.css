@@ -177,7 +177,7 @@ ol {
   text-transform: uppercase;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 160ms var(--ease-out), background-color 150ms ease, border-color 150ms ease;
+  transition: transform 160ms var(--ease-out);
 }
 .knop:active {
   transform: scale(0.97);
@@ -185,22 +185,86 @@ ol {
 .knop--rood {
   background: var(--rood);
   color: var(--wit);
+  /* op donker vlak: wit veegt erover en de tekst wordt rood */
+  --veeg: var(--wit);
+  --veeg-tekst: var(--rood);
+}
+.afhalen .knop--rood {
+  /* op wit vlak: zwart veegt erover */
+  --veeg: var(--inkt);
+  --veeg-tekst: var(--wit);
 }
 .knop--lijn {
-  border-color: currentColor;
-  color: inherit;
-}
-.hero .knop--lijn,
-.tijden .knop--lijn {
   border-color: rgba(255, 255, 255, 0.5);
+  color: inherit;
+  --veeg: var(--wit);
+  --veeg-tekst: var(--inkt);
+}
+
+/* hover: een kleurvlak schuift van links over de knop, het icoon reageert mee.
+   Alleen met een muis; op een telefoon blijft het bij het indrukeffect. */
+.veeg {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.veeg::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  background: var(--veeg, var(--wit));
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 380ms var(--ease-out);
+}
+.veeg .i {
+  transition: transform 300ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
-  .knop--rood:hover {
-    background: var(--rood-donker);
+  .veeg {
+    transition: transform 160ms var(--ease-out), color 260ms var(--ease-out), border-color 260ms var(--ease-out);
   }
-  .hero .knop--lijn:hover,
-  .tijden .knop--lijn:hover {
-    border-color: var(--wit);
+  .veeg:hover,
+  .veeg:focus-visible {
+    color: var(--veeg-tekst, var(--rood));
+    border-color: var(--veeg, var(--wit));
+  }
+  .veeg:hover::before,
+  .veeg:focus-visible::before {
+    transform: scaleX(1);
+  }
+  .veeg:hover .i--pijl {
+    transform: translateY(4px);
+  }
+  .veeg:hover .i--pin {
+    transform: translateY(-3px);
+  }
+  .veeg:hover .i--tel {
+    animation: rinkel 650ms var(--ease-out) 1;
+  }
+}
+@keyframes rinkel {
+  0% { transform: rotate(0); }
+  20% { transform: rotate(-16deg); }
+  40% { transform: rotate(13deg); }
+  60% { transform: rotate(-9deg); }
+  80% { transform: rotate(5deg); }
+  100% { transform: rotate(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .veeg::before {
+    transform: none;
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+  .veeg:hover::before,
+  .veeg:focus-visible::before {
+    opacity: 1;
+  }
+  .veeg:hover .i {
+    transform: none;
+    animation: none;
   }
 }
 
@@ -428,15 +492,20 @@ ol {
   top: 6%;
 }
 
-/* één keer bij het laden: de foto's komen rustig binnen */
+/* één keer bij het laden: de foto's komen rustig binnen ('translate'),
+   daarna bewegen ze mee met het scrollen ('transform', gezet door app.js) */
 .js .hf {
   opacity: 0;
-  transform: translateY(14px);
+  translate: 0 14px;
 }
 .is-klaar .hf {
   opacity: 1;
-  transform: none;
-  transition: opacity 600ms var(--ease-out), transform 700ms var(--ease-out);
+  translate: 0 0;
+  transition: opacity 600ms var(--ease-out), translate 700ms var(--ease-out);
+}
+.js .hf,
+.js .afhalen__foto {
+  will-change: transform;
 }
 .is-klaar .hf--22 {
   transition-delay: 90ms;
@@ -446,7 +515,7 @@ ol {
 }
 @media (prefers-reduced-motion: reduce) {
   .js .hf {
-    transform: none;
+    translate: none;
   }
   .is-klaar .hf {
     transition: opacity 300ms ease;
@@ -463,6 +532,11 @@ ol {
 .afhalen {
   background: var(--wit);
   color: var(--inkt);
+  overflow: clip; /* het meebewegende bakje mag nooit buiten beeld uitsteken */
+}
+/* een onderdeel dat focus krijgt na een klik op "Bekijk het menu" e.d. krijgt geen rand */
+main > section[tabindex='-1']:focus {
+  outline: none;
 }
 .menu,
 .afhalen,
