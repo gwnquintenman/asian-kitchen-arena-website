@@ -492,34 +492,38 @@ ol {
   top: 6%;
 }
 
-/* één keer bij het laden: de foto's komen rustig binnen ('translate'),
+/* één keer bij het laden: de foto's komen rustig binnen ('translate', pure CSS, dus ook zonder script),
    daarna bewegen ze mee met het scrollen ('transform', gezet door app.js) */
-.js .hf {
-  opacity: 0;
-  translate: 0 14px;
+@keyframes binnenkomen {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
 }
-.is-klaar .hf {
-  opacity: 1;
-  translate: 0 0;
-  transition: opacity 600ms var(--ease-out), translate 700ms var(--ease-out);
+@keyframes binnenkomen-rustig {
+  from {
+    opacity: 0;
+  }
 }
-.js .hf,
-.js .afhalen__foto {
-  will-change: transform;
+.hf {
+  animation: binnenkomen 700ms var(--ease-out) both;
 }
-.is-klaar .hf--22 {
-  transition-delay: 90ms;
+.hf--22 {
+  animation-delay: 90ms;
 }
-.is-klaar .hf--39 {
-  transition-delay: 180ms;
+.hf--39 {
+  animation-delay: 180ms;
 }
 @media (prefers-reduced-motion: reduce) {
-  .js .hf {
-    translate: none;
+  .hf {
+    animation-name: binnenkomen-rustig;
+    animation-duration: 300ms;
   }
-  .is-klaar .hf {
-    transition: opacity 300ms ease;
-  }
+}
+.js .hf,
+.js .hf--22 img,
+.js .afhalen__foto {
+  will-change: transform;
 }
 
 /* ---------- algemene sectiekop ---------- */

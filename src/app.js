@@ -5,13 +5,6 @@
 
   var data = JSON.parse(document.getElementById('pagina-data').textContent);
 
-  // ---------- foto's bovenaan: één keer rustig binnenkomen ----------
-  requestAnimationFrame(function () {
-    requestAnimationFrame(function () {
-      document.documentElement.classList.add('is-klaar');
-    });
-  });
-
   // ---------- vandaag (in Amsterdamse tijd) ----------
   var dag;
   try {
@@ -166,40 +159,58 @@
   volgHash(location.hash, true);
 
   // ---------- foto's bewegen mee met het scrollen ----------
-  // Elke laag schuift iets sneller omhoog dan de pagina (diepte). We meten de houder (die zelf niet beweegt)
-  // en zetten alleen 'transform' op de foto. 'px' = verschuiving, 'draai' = graden, bij een heel scherm afstand.
+  // Diepte: de voorste doosjes gaan sneller omhoog dan de pagina, het bord blijft iets achter en draait mee.
+  // We meten de houder (die zelf niet beweegt) en zetten alleen 'transform' op de foto.
+  // px / draai = verschuiving en graden per schermhoogte gescrold. Bij het laden staat alles op 0.
   var lagen = [];
   var heroFotos = document.querySelector('.hero__fotos');
   if (heroFotos) {
     [
-      ['.hf--40', 70, -3],
-      ['.hf--22', 35, 0],
-      ['.hf--39', 120, 4],
+      // selector, px (breed scherm), px (smal scherm), draai, draai van alleen de foto (het bord draait, het
+      // Nr.-rondje niet). Op een smal scherm staan de foto's ONDER de tekst: daar blijft nr. 40 (bovenaan) juist
+      // achter, zodat geen enkele foto over de tekst schuift; nr. 39 heeft ruimte en gaat omhoog.
+      ['.hf--40', 240, -50, -10, 0],
+      ['.hf--22', -70, 30, 0, 30],
+      ['.hf--39', 360, 170, 12, 0],
     ].forEach(function (l) {
       var el = heroFotos.querySelector(l[0]);
-      if (el) lagen.push({ el: el, houder: heroFotos, px: l[1], draai: l[2] });
+      if (el) lagen.push({ el: el, houder: heroFotos, px: l[1], pxSmal: l[2], draai: l[3], img: l[4] ? el.querySelector('img') : null, imgDraai: l[4] });
     });
   }
   var bakje = document.querySelector('.afhalen__foto');
-  if (bakje) lagen.push({ el: bakje, houder: bakje.parentNode, px: 60, draai: -6 });
+  // het bakje staat recht als het midden in beeld is (de witte foto blijft zo binnen het witte vlak)
+  if (bakje) lagen.push({ el: bakje, houder: bakje.parentNode, px: 90, pxSmal: 40, draai: -8, vanafMidden: true });
+
+  // positie van een houder t.o.v. het midden van het scherm: 0 = midden, 1 = onderkant, -1 = bovenkant
+  function stand(r, vh) {
+    return (r.top + r.height / 2 - vh / 2) / vh;
+  }
+  function beginStand() {
+    // waar elke houder stond toen de pagina bovenaan stond (dan is de verschuiving 0)
+    var vh = window.innerHeight;
+    lagen.forEach(function (l) {
+      var r = l.houder.getBoundingClientRect();
+      l.d0 = l.vanafMidden ? 0 : Math.min(1, stand({ top: r.top + window.scrollY, height: r.height }, vh));
+    });
+  }
 
   var gepland = false;
   function beweeg() {
     gepland = false;
     if (minderBeweging.matches) return;
     var vh = window.innerHeight;
-    var schaal = window.innerWidth < 900 ? 0.55 : 1;
+    var smal = window.innerWidth < 900; // zelfde grens als in styles.css: daaronder staan de foto's onder de tekst
     // eerst alles meten, daarna alles zetten (geen heen-en-weer tussen lezen en schrijven)
     var maten = lagen.map(function (l) {
       return l.houder.getBoundingClientRect();
     });
     lagen.forEach(function (l, i) {
       var r = maten[i];
-      if (r.bottom < -200 || r.top > vh + 200) return;
-      // -1 = boven in beeld, 0 = midden, 1 = onder in beeld
-      var d = Math.max(-1, Math.min(1, (r.top + r.height / 2 - vh / 2) / vh));
+      if (r.bottom < -300 || r.top > vh + 300) return;
+      var delta = Math.max(-1.5, Math.min(1, stand(r, vh))) - l.d0;
       l.el.style.transform =
-        'translate3d(0,' + (d * l.px * schaal).toFixed(1) + 'px,0) rotate(' + (d * l.draai * schaal).toFixed(2) + 'deg)';
+        'translate3d(0,' + (delta * (smal ? l.pxSmal : l.px)).toFixed(1) + 'px,0) rotate(' + (delta * l.draai).toFixed(2) + 'deg)';
+      if (l.img) l.img.style.transform = 'rotate(' + (delta * l.imgDraai).toFixed(2) + 'deg)';
     });
   }
   function plan() {
@@ -209,14 +220,19 @@
     }
   }
   if (lagen.length) {
+    beginStand();
     window.addEventListener('scroll', plan, { passive: true });
-    window.addEventListener('resize', plan);
+    window.addEventListener('resize', function () {
+      beginStand();
+      plan();
+    });
     beweeg();
   }
   minderBeweging.addEventListener('change', function () {
     if (minderBeweging.matches) {
       lagen.forEach(function (l) {
         l.el.style.transform = '';
+        if (l.img) l.img.style.transform = '';
       });
     } else {
       beweeg();
