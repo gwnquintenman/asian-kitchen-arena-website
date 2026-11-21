@@ -46,6 +46,15 @@ for out, src in dishes.items():
     im = trim(Image.open(SRC / src).convert("RGBA"))
     save_webp(fit(im, 360), out)
 
+# Grote versies voor de bovenkant van de pagina
+for out, src in {
+    "nr-22-groot.webp": "pdf-nr22-kip-szechuan.png",
+    "nr-40-groot.webp": "pdf-nr40-noedels-groenten.png",
+    "nr-39-groot.webp": "pdf-nr39-nasi-groenten.png",
+}.items():
+    im = trim(Image.open(SRC / src).convert("RGBA"))
+    save_webp(fit(im, 820), out, quality=80)
+
 # Logo: origineel uit de pdf is rood + wit (voor donkere achtergrond).
 logo = trim(Image.open(SRC / "pdf-logo.png").convert("RGBA"))
 
@@ -68,6 +77,18 @@ def recolor(im, white_to=None, red_to=None):
 
 
 logo_light = recolor(logo, white_to=INK)          # rood + zwart, voor witte achtergrond
+
+# Woordmerk: alleen de rode penseeltekst "Asian Kitchen", liggend, voor de kopbalk
+woord = logo.copy()
+wpx_ = woord.load()
+for y in range(woord.size[1]):
+    for x in range(woord.size[0]):
+        r, g, b, a = wpx_[x, y]
+        if not (r > 110 and g < 0.55 * r and b < 0.55 * r):  # alles wat niet rood is weghalen
+            wpx_[x, y] = (0, 0, 0, 0)
+woord = trim(woord)
+woord.save(OUT / "woordmerk.png", optimize=True)
+print("woordmerk.png", woord.size)
 logo_dark = logo                                   # rood + wit, voor zwarte achtergrond
 for name, im in (("logo-licht", logo_light), ("logo-donker", logo_dark)):
     sized = fit(im, 360)

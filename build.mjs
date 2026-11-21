@@ -1,27 +1,25 @@
 // Bouwt de website in de map site/ uit content/ en src/.
-//   node build.mjs              -> site/ (voor de echte website)
-//   node build.mjs --preview    -> zelfde, maar zoekmachines mogen hem niet opnemen
-//   node build.mjs --out map    -> naar een andere map bouwen
-//   node build.mjs --url https://... -> ander webadres voor zoekmachines en deel-links
+//   node build.mjs                    -> site/ (voor de echte website)
+//   node build.mjs --preview          -> zelfde, maar zoekmachines mogen hem niet opnemen
+//   node build.mjs --out map          -> naar een andere map bouwen
+//   node build.mjs --url https://...  -> ander webadres voor zoekmachines en deel-links
 // Geen extra pakketten nodig: alleen Node.js.
 
-import { readFile, writeFile, mkdir, cp, rm, readdir } from 'node:fs/promises';
+import { writeFile, mkdir, cp, rm, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import gegevens from './content/gegevens.mjs';
 import teksten from './content/teksten.mjs';
-import { categorieen, extras, dranken } from './content/menu.mjs';
+import { categorieen, alleGerechten } from './content/menu.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const PREVIEW = args.includes('--preview');
-const outIndex = args.indexOf('--out');
-const OUT = path.resolve(ROOT, outIndex >= 0 ? args[outIndex + 1] : 'site');
-// --url: ander webadres gebruiken (bijv. voor de preview op GitHub Pages)
-const urlIndex = args.indexOf('--url');
-if (urlIndex >= 0) gegevens.websiteUrl = args[urlIndex + 1];
+const argWaarde = (naam) => (args.includes(naam) ? args[args.indexOf(naam) + 1] : null);
+const OUT = path.resolve(ROOT, argWaarde('--out') ?? 'site');
+if (argWaarde('--url')) gegevens.websiteUrl = argWaarde('--url');
 const TALEN = ['nl', 'en'];
 const DAGEN = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
 
@@ -29,20 +27,20 @@ const DAGEN = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
 
 const fouten = [];
 const gezien = new Set();
-const alleGerechten = categorieen.flatMap((c) => (c.groepen ? c.groepen.flatMap((g) => g.gerechten) : c.gerechten));
-for (const g of alleGerechten) {
+for (const g of alleGerechten('nl')) {
   const label = `gerecht ${g.nr ?? '(zonder nummer)'}`;
   if (!g.nr) fouten.push(`${label}: nummer ontbreekt`);
   if (gezien.has(g.nr)) fouten.push(`${label}: nummer komt twee keer voor`);
   gezien.add(g.nr);
   if (typeof g.prijs !== 'number' || !(g.prijs > 0)) fouten.push(`${label}: prijs moet een getal zijn, bijv. 13.5`);
-  for (const t of TALEN) if (!g.naam?.[t]) fouten.push(`${label}: naam (${t}) ontbreekt`);
   for (const l of g.labels) if (!teksten.labels[l]) fouten.push(`${label}: onbekend label '${l}'`);
-  if (g.foto && !existsSync(path.join(ROOT, 'src/images', g.foto))) fouten.push(`${label}: foto ${g.foto} niet gevonden in src/images`);
+  if (g.foto && !existsSync(path.join(ROOT, 'src/images', g.foto))) fouten.push(`${label}: foto ${g.foto} niet gevonden`);
   if (g.allergenen) for (const a of g.allergenen) if (!teksten.allergenen[a]) fouten.push(`${label}: onbekend allergeen '${a}'`);
 }
-for (const x of [...extras.vervangen, ...extras.erbij, ...dranken.items]) {
-  if (typeof x.prijs !== 'number' || !(x.prijs > 0)) fouten.push(`${x.naam?.nl}: prijs moet een getal zijn`);
+for (const c of categorieen) {
+  for (const t of TALEN) if (!c.naam?.[t]) fouten.push(`categorie ${c.id}: naam (${t}) ontbreekt`);
+  const prijzen = c.soort === 'extras' ? [...c.vervangen, ...c.erbij] : c.soort === 'dranken' ? c.items : [];
+  for (const x of prijzen) if (typeof x.prijs !== 'number' || !(x.prijs > 0)) fouten.push(`${c.id} / ${x.naam?.nl}: prijs moet een getal zijn`);
 }
 for (const regel of gegevens.openingstijden) {
   for (const d of regel.dagen) if (!DAGEN.includes(d)) fouten.push(`openingstijden: onbekende dag '${d}'`);
@@ -57,17 +55,14 @@ if (fouten.length) {
 
 // ---------- hulpjes ----------
 
-const esc = (s) =>
-  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 function prijs(p, taal) {
   const s = p.toFixed(2);
   return taal === 'nl' ? `€\u00a0${s.replace('.', ',')}` : `€${s}`;
 }
 
-function vul(tekst, waarden = {}) {
-  return tekst.replace(/\{(\w+)\}/g, (m, k) => (k in waarden ? waarden[k] : m));
-}
+const vul = (tekst, waarden = {}) => tekst.replace(/\{(\w+)\}/g, (m, k) => (k in waarden ? waarden[k] : m));
 
 const adresRegel = `${gegevens.adres.straat}, ${gegevens.adres.postcode} ${gegevens.adres.plaats}`;
 const vast = {
@@ -78,24 +73,13 @@ const vast = {
 };
 const T = (obj, taal, extra = {}) => vul(obj[taal], { ...vast, ...extra });
 
-// tekst met het telefoonnummer (gewoon of internationaal) als klikbare link
+// tekst (al ingevuld) met het telefoonnummer als klikbare link
 function metBelLink(tekst) {
   let html = esc(tekst);
   for (const nr of [gegevens.telefoon.weergave, gegevens.telefoon.internationaal].map(esc)) {
     html = html.replace(nr, `<a href="${gegevens.telefoon.link}" class="tel">${nr}</a>`);
   }
   return html;
-}
-
-function zoektekst(...delen) {
-  return delen
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
 }
 
 function tijdenPerDag() {
@@ -107,15 +91,14 @@ function tijdenPerDag() {
 function tijdenKort(taal) {
   return gegevens.openingstijden
     .map((r) => {
-      const eerste = teksten.dagen[r.dagen[0]][taal].slice(0, 2).toLowerCase();
-      const laatste = teksten.dagen[r.dagen.at(-1)][taal].slice(0, 2).toLowerCase();
-      const dagen = r.dagen.length > 1 ? `${eerste}–${laatste}` : eerste;
+      const kort = (d) => teksten.dagen[d][taal].slice(0, 2).toLowerCase();
+      const dagen = r.dagen.length > 1 ? `${kort(r.dagen[0])}–${kort(r.dagen.at(-1))}` : kort(r.dagen[0]);
       return `${dagen} ${r.open}–${r.dicht}`;
     })
     .join(' · ');
 }
 
-// ---------- iconen (klein, inline) ----------
+// ---------- iconen (klein, inline, één stijl) ----------
 
 const icon = {
   tel: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.2 15.2 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z" fill="currentColor"/></svg>',
@@ -123,85 +106,122 @@ const icon = {
   pijl: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v14m0 0-6-6m6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   peper: '<svg class="i i--peper" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 6.2c1.6.2 3 1.6 3.1 3.4.3 4.6-5.4 11-13.6 11.9-1 .1-1.2-1.1-.3-1.4 5.3-1.9 7.6-6.3 8.4-10.7.3-1.9 1.1-3.4 2.4-3.2z" fill="currentColor"/><path d="M16 6.3c.1-1.6.9-2.9 2.6-3.5" fill="none" stroke="#2f7a3b" stroke-width="1.8" stroke-linecap="round"/></svg>',
   blad: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4C9 4 4 9.5 4 16c0 1.4.3 2.6.8 3.6C7 13 11 10 15 8.5c-4 2.3-7 6-8.6 11.2 1 .5 2.1.8 3.4.8C16.5 20.5 20 14 20 4z" fill="currentColor"/></svg>',
-  extern: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6m0-6-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  plus: '<svg class="i i--plus" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
 };
 
-// ---------- onderdelen van de pagina ----------
-
-function belKnop(taal, klasse = '') {
-  return `<a class="btn btn--bel ${klasse}" href="${gegevens.telefoon.link}">${icon.tel}<span>${esc(T(teksten.belKnop, taal))}</span><span class="btn__nr">${esc(gegevens.telefoon.weergave)}</span></a>`;
+function pepers(n, taal) {
+  if (!n) return '';
+  return `<span class="peper" title="${esc(teksten.labels['peper' + n][taal])}">${icon.peper.repeat(n)}<span class="vh">${esc(teksten.labels['peper' + n][taal])}</span></span>`;
 }
 
-function tags(g, taal) {
-  const uit = g.labels.map((l) => {
-    const extra = l === 'vegetarisch' ? icon.blad : '';
-    return `<span class="tag tag--${l}">${extra}${esc(teksten.labels[l][taal])}</span>`;
-  });
-  if (g.peper) {
-    const pepers = icon.peper.repeat(g.peper);
-    uit.push(`<span class="tag tag--peper">${pepers}${esc(teksten.labels['peper' + g.peper][taal])}</span>`);
-  }
+function tags(labels, peper, taal) {
+  const uit = labels.map((l) => `<span class="tag tag--${l}">${l === 'vegetarisch' ? icon.blad : ''}${esc(teksten.labels[l][taal])}</span>`);
+  if (peper) uit.push(`<span class="tag tag--peper">${icon.peper.repeat(peper)}${esc(teksten.labels['peper' + peper][taal])}</span>`);
   return uit.join('');
 }
 
-function gerechtHtml(g, taal) {
-  const naam = g.naam[taal];
-  const ander = g.naam[taal === 'nl' ? 'en' : 'nl'];
-  const inhoud = g.inhoud ? g.inhoud[taal] : '';
-  const labelTekst = g.labels.map((l) => teksten.labels[l][taal]).join(' ');
-  const zoek = zoektekst(naam, ander, inhoud, labelTekst);
-  const foto = g.foto
-    ? `<img class="dish__foto" src="images/${g.foto}" alt="${esc(T(teksten.menu.fotoAlt, taal, { nr: g.nr, naam }))}" loading="lazy" decoding="async" width="180" height="150">`
-    : '';
-  const tagHtml = tags(g, taal);
-  return `<li class="dish${g.foto ? ' dish--foto' : ''}" id="nr-${esc(g.nr)}" data-nr="${esc(g.nr)}" data-zoek="${esc(zoek)}">
-  <p class="dish__nr"><span class="vh">${esc(teksten.menu.nummer[taal])} </span>${esc(g.nr)}</p>
-  <div class="dish__main">
-    <h4 class="dish__naam">${esc(naam)}</h4>
-    ${inhoud ? `<p class="dish__inhoud">${esc(inhoud)}</p>` : ''}
-    ${tagHtml ? `<p class="dish__meta">${tagHtml}</p>` : ''}
-  </div>
-  <div class="dish__zij">
-    <p class="dish__prijs">${prijs(g.prijs, taal)}</p>
-    <button type="button" class="dish__allergie js-only" data-nr="${esc(g.nr)}" aria-label="${esc(T(teksten.menu.allergieLabel, taal, { nr: g.nr, naam }))}">${esc(teksten.menu.allergieKnop[taal])}</button>
-  </div>
-  ${foto}
-</li>`;
-}
+// ---------- menu: onderdelen ----------
 
 function rijstNotitie(c, taal) {
   if (!c.rijstRuilen) return '';
+  const extras = categorieen.find((x) => x.id === 'extras');
   const p = prijs(extras.vervangen[0].prijs, taal);
   const tekst = Array.isArray(c.rijstRuilen)
     ? T(teksten.menu.rijstRuilenBij, taal, { nrs: c.rijstRuilen.join(', '), prijs: p })
     : T(teksten.menu.rijstRuilen, taal, { prijs: p });
-  return `<p class="cat__ruil">${esc(tekst)} <a href="#extras">${esc(teksten.menu.alleExtras[taal])}</a></p>`;
+  return `<p class="paneel__noot">${esc(tekst)} <a href="#paneel-extras" data-naar-paneel="extras">${esc(teksten.menu.alleExtras[taal])}</a></p>`;
 }
 
-function categorieHtml(c, taal) {
-  const lijsten = c.groepen
-    ? c.groepen
-        .map(
-          (gr) => `<div class="cat__groep"><h4 class="cat__sub">${esc(gr.titel[taal])}</h4>
-<ul class="dishes">${gr.gerechten.map((g) => gerechtHtml(g, taal)).join('\n')}</ul></div>`,
-        )
-        .join('\n')
-    : `<ul class="dishes">${c.gerechten.map((g) => gerechtHtml(g, taal)).join('\n')}</ul>`;
-  return `<section class="cat" id="${c.id}" aria-labelledby="h-${c.id}">
-<h3 class="cat__titel" id="h-${c.id}">${esc(c.naam[taal])}</h3>
-${c.intro ? `<p class="cat__intro">${esc(c.intro[taal])}</p>` : ''}
-${rijstNotitie(c, taal)}
-${lijsten}
-</section>`;
+function foto(bestand, nr, naam, taal, klasse = '') {
+  return `<figure class="gerechtfoto ${klasse}">
+  <img src="images/${bestand}" alt="${esc(T(teksten.menu.fotoAlt, taal, { nr, naam }))}" loading="lazy" decoding="async" width="360" height="300">
+  <span class="badge" aria-hidden="true"><small>${esc(teksten.menu.nummer[taal])}</small>${esc(nr)}</span>
+</figure>`;
 }
 
-function extrasHtml(taal) {
+function rasterHtml(c, taal) {
+  const prijsPerRij = c.rijen.some((r) => r.prijs);
+  const kop = c.kolommen
+    .map((k) => {
+      const halal = k.labels?.includes('halal-kip') ? `<span class="raster__halal">${esc(teksten.labels.halalKort[taal])}</span>` : '';
+      const p = k.prijs ? `<span class="raster__prijs">${prijs(k.prijs, taal)}</span>` : '';
+      return `<th scope="col"><span class="raster__kol">${esc(k.naam[taal])}</span>${p}${halal}</th>`;
+    })
+    .join('');
+  const rijen = c.rijen
+    .map((rij) => {
+      const cellen = c.kolommen
+        .map((k) => {
+          const nr = rij.nrs[k.id];
+          const p = rij.prijs ?? k.prijs;
+          const naam = c.gerechtNaam[taal](rij, k);
+          const labels = [...(rij.labels ?? []), ...(k.labels ?? [])];
+          return `<td class="gerecht" id="nr-${esc(nr)}" data-nr="${esc(nr)}" data-prijs="${p}" data-peper="${rij.peper ?? 0}" data-labels="${labels.join(' ')}"><span class="raster__nr">${esc(nr)}</span><span class="vh">${esc(naam)}, ${prijs(p, taal)}</span></td>`;
+        })
+        .join('');
+      const halal = rij.labels?.includes('halal-kip') ? `<span class="raster__halal">${esc(teksten.labels.halalKort[taal])}</span>` : '';
+      const rijPrijs = prijsPerRij ? `<td class="raster__rijprijs">${prijs(rij.prijs, taal)}</td>` : '';
+      return `<tr><th scope="row"><span class="raster__rijnaam">${esc(rij.naam[taal])}</span>${pepers(rij.peper, taal)}${halal}</th>${cellen}${rijPrijs}</tr>`;
+    })
+    .join('\n');
+  const prijsKop = prijsPerRij ? `<th scope="col"><span class="raster__kol">${taal === 'nl' ? 'Prijs' : 'Price'}</span></th>` : '';
+  const fotoHtml = c.foto
+    ? foto(c.foto.bestand, c.foto.nr, alleGerechten(taal).find((g) => g.nr === c.foto.nr).naam, taal, 'gerechtfoto--raster')
+    : '';
+  return `<div class="raster-blok${c.foto ? ' raster-blok--foto' : ''}">
+<div class="raster-wrap">
+<table class="raster raster--${c.kolommen.length + (prijsPerRij ? 1 : 0)}">
+<caption class="vh">${esc(c.naam[taal])}: ${esc(teksten.menu.rasterUitleg[taal])}</caption>
+<thead><tr><th scope="col" class="raster__hoek">${esc(c.rijKop[taal])}</th>${kop}${prijsKop}</tr></thead>
+<tbody>
+${rijen}
+</tbody>
+</table>
+</div>
+${fotoHtml}
+</div>`;
+}
+
+function rijHtml(g, taal) {
+  const naam = g.naam[taal];
+  const inhoud = g.inhoud ? `<p class="rij__inhoud">${esc(g.inhoud[taal])}</p>` : '';
+  const tagHtml = tags(g.labels, g.peper, taal);
+  const allergenen = g.allergenen
+    ? `<p class="rij__allergenen">${esc(teksten.menu.allergenenLabel[taal])}: ${g.allergenen.map((a) => esc(teksten.allergenen[a][taal])).join(', ')}</p>`
+    : '';
+  const fotoHtml = g.foto ? foto(g.foto, g.nr, naam, taal, 'gerechtfoto--rij') : '';
+  return `<li class="gerecht rij${g.foto ? ' rij--foto' : ''}" id="nr-${esc(g.nr)}" data-nr="${esc(g.nr)}" data-prijs="${g.prijs}" data-peper="${g.peper}" data-labels="${g.labels.join(' ')}">
+  <span class="rij__nr"><span class="vh">${esc(teksten.menu.nummer[taal])} </span>${esc(g.nr)}</span>
+  <div class="rij__tekst">
+    <p class="rij__kop"><span class="rij__naam">${esc(naam)}</span><span class="rij__stip" aria-hidden="true"></span><span class="rij__prijs">${prijs(g.prijs, taal)}</span></p>
+    ${inhoud}${tagHtml ? `<p class="rij__tags">${tagHtml}</p>` : ''}${allergenen}
+  </div>
+  ${fotoHtml}
+</li>`;
+}
+
+function lijstHtml(c, taal) {
+  if (c.groepen) {
+    return c.groepen
+      .map(
+        (gr) => `<div class="groep">
+<h4 class="groep__titel">${esc(gr.titel[taal])}</h4>
+<ul class="lijst">${gr.gerechten.map((g) => rijHtml(g, taal)).join('\n')}</ul>
+${gr.noot ? `<p class="paneel__noot">${esc(gr.noot[taal])}</p>` : ''}
+</div>`,
+      )
+      .join('\n');
+  }
+  return `<ul class="lijst">${c.gerechten.map((g) => rijHtml(g, taal)).join('\n')}</ul>`;
+}
+
+function extrasHtml(c, taal) {
   const e = teksten.extras;
-  const rij = (x, plus) =>
-    `<li class="extra" data-zoek="${esc(zoektekst(x.naam.nl, x.naam.en))}"><span class="extra__naam">${esc(x.naam[taal])}</span><span class="extra__prijs">${plus ? '+ ' : ''}${prijs(x.prijs, taal)}</span></li>`;
-  const p19 = alleGerechten.find((g) => g.nr === '19').prijs;
-  const ruil = extras.vervangen[0].prijs;
-  const rijst = extras.erbij.find((x) => x.naam.nl === 'Witte rijst').prijs;
+  const rij = (x) =>
+    `<li class="extra"><span class="extra__naam">${esc(x.naam[taal])}</span><span class="rij__stip" aria-hidden="true"></span><span class="extra__prijs">+ ${prijs(x.prijs, taal)}</span></li>`;
+  const p19 = alleGerechten(taal).find((g) => g.nr === '19').prijs;
+  const ruil = c.vervangen[0].prijs;
+  const rijst = c.erbij.find((x) => x.sleutel === 'witte-rijst').prijs;
   const voorbeelden = e.voorbeelden[taal].map((v) =>
     vul(v, {
       p19: prijs(p19, taal),
@@ -211,152 +231,166 @@ function extrasHtml(taal) {
       som2: prijs(p19 + rijst, taal),
     }),
   );
-  return `<section class="cat cat--extras" id="${extras.id}" aria-labelledby="h-${extras.id}">
-<h3 class="cat__titel" id="h-${extras.id}">${esc(extras.naam[taal])}</h3>
-<p class="cat__intro">${esc(e.intro[taal])}</p>
+  return `<p class="paneel__intro">${esc(e.intro[taal])}</p>
 <div class="extras">
   <div class="extras__blok extras__blok--ruil">
     <h4 class="extras__titel">${esc(e.vervangenTitel[taal])}</h4>
     <p class="extras__uitleg">${esc(e.vervangenUitleg[taal])}</p>
-    <ul class="extras__lijst">${extras.vervangen.map((x) => rij(x, true)).join('')}</ul>
+    <ul class="extras__lijst">${c.vervangen.map(rij).join('')}</ul>
   </div>
   <div class="extras__blok">
     <h4 class="extras__titel">${esc(e.erbijTitel[taal])}</h4>
     <p class="extras__uitleg">${esc(e.erbijUitleg[taal])}</p>
-    <ul class="extras__lijst">${extras.erbij.map((x) => rij(x, true)).join('')}</ul>
+    <ul class="extras__lijst">${c.erbij.map(rij).join('')}</ul>
   </div>
 </div>
-<div class="extras__voorbeeld">
-  <p class="extras__vtitel">${esc(e.voorbeeldTitel[taal])}</p>
+<div class="som">
+  <p class="som__titel">${esc(e.voorbeeldTitel[taal])}</p>
   <ul>${voorbeelden.map((v) => `<li>${esc(v)}</li>`).join('')}</ul>
 </div>
-<p class="cat__noot">${esc(e.twijfel[taal])}</p>
-</section>`;
+<p class="paneel__noot">${esc(e.twijfel[taal])}</p>`;
 }
 
-function drankenHtml(taal) {
-  const rij = (d) =>
-    `<li class="extra${d.keuzes ? ' extra--groep' : ''}" data-zoek="${esc(zoektekst(d.naam.nl, d.naam.en, d.keuzes?.nl, d.keuzes?.en))}">
+function drankenHtml(c, taal) {
+  const rij = (d) => `<li class="extra${d.keuzes ? ' extra--groep' : ''}">
   <span class="extra__naam">${esc(d.naam[taal])}${d.keuzes ? `<span class="extra__keuzes">${esc(d.keuzes[taal])}</span>` : ''}</span>
-  <span class="extra__prijs">${prijs(d.prijs, taal)}</span></li>`;
-  return `<section class="cat cat--dranken" id="${dranken.id}" aria-labelledby="h-${dranken.id}">
-<h3 class="cat__titel" id="h-${dranken.id}">${esc(dranken.naam[taal])}</h3>
-<ul class="extras__lijst extras__lijst--dranken">${dranken.items.map(rij).join('\n')}</ul>
-<p class="cat__noot">${esc(teksten.dranken.alcohol[taal])}</p>
+  <span class="rij__stip" aria-hidden="true"></span><span class="extra__prijs">${prijs(d.prijs, taal)}</span></li>`;
+  return `<ul class="extras__lijst extras__lijst--dranken">${c.items.map(rij).join('\n')}</ul>
+<p class="paneel__noot">${esc(teksten.dranken.alcohol[taal])}</p>`;
+}
+
+function paneelHtml(c, taal, i) {
+  const inhoud =
+    c.soort === 'raster' ? rasterHtml(c, taal) : c.soort === 'lijst' ? lijstHtml(c, taal) : c.soort === 'extras' ? extrasHtml(c, taal) : drankenHtml(c, taal);
+  const intro = c.intro ? `<p class="paneel__intro">${esc(c.intro[taal])}</p>` : '';
+  return `<section class="paneel paneel--${c.soort}" id="paneel-${c.id}" data-paneel="${c.id}" aria-labelledby="titel-${c.id}"${i === 0 ? '' : ' data-start-verborgen'}>
+<h3 class="paneel__titel" id="titel-${c.id}">${esc(c.naam[taal])}</h3>
+${intro}
+${rijstNotitie(c, taal)}
+${inhoud}
 </section>`;
 }
 
-function alleCategorieen() {
-  // volgorde van het menu op de site
-  const [noedels, kip, rund, garnalen, special, vega, noedelsoep, soep, bites] = categorieen;
-  return [noedels, kip, rund, garnalen, special, vega, { id: extras.id, naam: extras.naam, type: 'extras' }, noedelsoep, soep, bites, { id: dranken.id, naam: dranken.naam, type: 'dranken' }];
+// ---------- secties ----------
+
+function heroHtml(taal) {
+  const h = teksten.hero;
+  const feiten = h.feiten[taal].map((f) => `<li>${esc(f)}</li>`).join('');
+  const fotos = [
+    ['40', 'nr-40-groot.webp', 661, 526],
+    ['22', 'nr-22-groot.webp', 637, 652],
+    ['39', 'nr-39-groot.webp', 768, 465],
+  ]
+    .map(
+      ([nr, bestand, w, hgt]) => `<figure class="hf hf--${nr}">
+  <img src="images/${bestand}" alt="" width="${w}" height="${hgt}" decoding="async"${nr === '22' ? ' fetchpriority="high"' : ''}>
+  <span class="badge" aria-hidden="true"><small>${esc(teksten.menu.nummer[taal])}</small>${nr}</span>
+</figure>`,
+    )
+    .join('\n');
+  return `<section class="hero" aria-labelledby="h-hero">
+<div class="wrap hero__in">
+  <div class="hero__tekst">
+    <p class="hero__plaats">${esc(T(h.plaats, taal))}</p>
+    <h1 id="h-hero">${esc(h.titel[taal])}</h1>
+    <p class="hero__lead">${esc(h.lead[taal])}</p>
+    <div class="knoppen">
+      <a class="knop knop--rood" href="#menu">${esc(h.menuKnop[taal])}${icon.pijl}</a>
+      <a class="knop knop--lijn" href="${gegevens.telefoon.link}">${icon.tel}${esc(T(h.belKnop, taal))}</a>
+    </div>
+    <ul class="hero__feiten">${feiten}</ul>
+    <p class="hero__vandaag"><span data-vandaag>${esc(tijdenKort(taal))}</span> <span class="hero__route">· <a href="${gegevens.routeLink}" target="_blank" rel="noopener">${esc(h.route[taal])}</a></span></p>
+  </div>
+  <div class="hero__fotos" role="img" aria-label="${esc(h.fotoAlt[taal])}">
+${fotos}
+  </div>
+</div>
+</section>`;
 }
 
 function menuHtml(taal) {
   const m = teksten.menu;
-  const volgorde = alleCategorieen();
-  const chips = volgorde
-    .map((c) => `<li><a class="chip" href="#${c.id}" data-cat="${c.id}">${esc(c.naam[taal])}</a></li>`)
+  const tabs = categorieen
+    .map(
+      (c, i) =>
+        `<button type="button" class="tab" role="tab" id="tab-${c.id}" aria-controls="paneel-${c.id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${esc(c.naam[taal])}</button>`,
+    )
     .join('');
-  const secties = volgorde
-    .map((c) => (c.type === 'extras' ? extrasHtml(taal) : c.type === 'dranken' ? drankenHtml(taal) : categorieHtml(c, taal)))
-    .join('\n');
-  const pdfPad = taal === 'nl' ? gegevens.menukaartPdf : `../${gegevens.menukaartPdf}`;
   return `<section class="menu" id="menu" aria-labelledby="h-menu">
 <div class="wrap">
-  <div class="menu__kop">
+  <div class="sectiekop">
     <h2 id="h-menu">${esc(m.titel[taal])}</h2>
-    <p class="menu__uitleg">${esc(m.uitleg[taal])}</p>
-    <p class="menu__allergie">${esc(m.allergie[taal])} <a href="#allergenen">${esc(m.allergieLink[taal])}</a></p>
-    <div class="zoek js-only">
-      <label class="zoek__label" for="zoek">${esc(m.zoekLabel[taal])}</label>
-      <div class="zoek__veld">
-        <input id="zoek" type="search" inputmode="search" autocomplete="off" spellcheck="false" placeholder="${esc(m.zoekHint[taal])}" aria-describedby="zoek-status">
-        <button type="button" class="zoek__wis" hidden>${esc(m.zoekWis[taal])}</button>
-      </div>
-      <p class="zoek__status" id="zoek-status" aria-live="polite"></p>
-    </div>
+    <p class="sectiekop__tekst">${esc(m.uitleg[taal])}</p>
+    <p class="menu__meta">${esc(m.allergie[taal])} <a href="#vraag-allergie">${esc(m.allergieLink[taal])}</a></p>
   </div>
-  <div class="menu__grid">
-    <nav class="cats" aria-label="${esc(m.categorieen[taal])}">
-      <ul class="cats__lijst">${chips}</ul>
-    </nav>
-    <div class="menu__inhoud">
-      <div class="zoek__geen" hidden><p class="zoek__geen-tekst"></p>${belKnop(taal, 'btn--stapel')}</div>
-      ${secties}
-      <p class="menu__pdf"><a href="${pdfPad}">${icon.extern}${esc(m.pdf[taal])} (pdf, 3 MB)</a></p>
-    </div>
+  <div class="tabs js-only" role="tablist" aria-label="${esc(m.tabsLabel[taal])}">${tabs}</div>
+  <div class="panelen">
+${categorieen.map((c, i) => paneelHtml(c, taal, i)).join('\n')}
   </div>
 </div>
 </section>`;
 }
 
-function bestellenHtml(taal) {
-  const b = teksten.bestellen;
-  const stappen = b.stappen[taal]
-    .map(([kop, tekst], i) => {
-      const kopHtml = i === 1 ? metBelLink(vul(kop, vast)) : esc(vul(kop, vast));
-      return `<li class="stap"><span class="stap__nr" aria-hidden="true">${i + 1}</span><p><strong>${kopHtml}</strong> ${esc(vul(tekst, vast))}</p></li>`;
-    })
-    .join('');
-  const buitenland = b.buitenland[taal] ? `<p class="bestel__noot">${metBelLink(T(b.buitenland, taal))}</p>` : '';
-  return `<section class="bestel" id="bestellen" aria-labelledby="h-bestellen">
-<div class="wrap">
-  <h2 id="h-bestellen">${esc(b.titel[taal])}</h2>
-  <ol class="stappen">${stappen}</ol>
-  <p class="bestel__noot">${esc(b.niet[taal])}</p>
-  ${buitenland}
+function afhalenHtml(taal) {
+  const a = teksten.afhalen;
+  const stappen = a.stappen[taal].map((s, i) => `<li><span class="stap__nr" aria-hidden="true">${i + 1}</span><p>${metBelLink(vul(s, vast))}</p></li>`).join('');
+  const buitenland = a.buitenland[taal] ? `<p class="afhalen__noot">${metBelLink(T(a.buitenland, taal))}</p>` : '';
+  return `<section class="afhalen" id="afhalen" aria-labelledby="h-afhalen">
+<div class="wrap afhalen__in">
+  <img class="afhalen__foto" src="images/afhaalbox-760.webp" srcset="images/afhaalbox-440.webp 440w, images/afhaalbox-760.webp 760w" sizes="(min-width: 900px) 420px, 80vw" width="760" height="731" alt="${esc(a.fotoAlt[taal])}" loading="lazy" decoding="async">
+  <div class="afhalen__tekst">
+    <h2 id="h-afhalen">${esc(a.titel[taal])}</h2>
+    <p class="sectiekop__tekst">${esc(a.intro[taal])}</p>
+    <ol class="stappen">${stappen}</ol>
+    <p class="afhalen__noot">${esc(a.evenement[taal])}</p>
+    ${buitenland}
+    <a class="knop knop--rood" href="${gegevens.telefoon.link}">${icon.tel}${esc(T(a.belKnop, taal))}</a>
+  </div>
 </div>
 </section>`;
 }
 
-function allergenenHtml(taal) {
-  const a = teksten.allergenenSectie;
-  const punten = a.punten[taal]
-    .map(([kop, tekst]) => `<li><strong>${esc(kop)}</strong> ${metBelLink(vul(tekst, vast))}</li>`)
-    .join('');
-  return `<section class="info" id="allergenen" aria-labelledby="h-allergenen">
-<div class="wrap wrap--smal">
-  <h2 id="h-allergenen">${esc(a.titel[taal])}</h2>
-  <ul class="info__lijst">${punten}</ul>
-  <a class="btn btn--rand" href="${gegevens.telefoon.link}">${icon.tel}<span>${esc(a.belKnop[taal])}: ${esc(gegevens.telefoon.weergave)}</span></a>
-</div>
-</section>`;
-}
-
-function tijdenTabel(taal) {
+function tijdenHtml(taal) {
+  const t = teksten.tijden;
   const perDag = tijdenPerDag();
   const rijen = DAGEN.map((d) => {
-    const t = perDag[d];
-    const tijd = t ? `${t.open}–${t.dicht}` : '–';
+    const x = perDag[d];
     const noot = d === 'zo' && gegevens.uitzondering ? `<span class="tijden__noot">${esc(gegevens.uitzondering[taal])}</span>` : '';
-    return `<tr data-dag="${d}"><th scope="row">${esc(teksten.dagen[d][taal])}<span class="tijden__vandaag"> (${esc(teksten.ophalen.vandaag[taal])})</span></th><td>${tijd}${noot}</td></tr>`;
+    return `<tr data-dag="${d}"><th scope="row">${esc(teksten.dagen[d][taal])}<span class="tijden__vandaag"> · ${esc(t.vandaag[taal])}</span></th><td>${x ? `${x.open}–${x.dicht}` : '–'}${noot}</td></tr>`;
   }).join('');
-  return `<table class="tijden"><caption class="vh">${esc(teksten.ophalen.tijdenTitel[taal])}</caption><tbody>${rijen}</tbody></table>`;
+  const voorheen = gegevens.adres.voorheen ? `<span class="adres__voorheen">(${esc(gegevens.adres.voorheen[taal])})</span>` : '';
+  return `<section class="tijden" id="tijden" aria-labelledby="h-tijden">
+<div class="wrap">
+  <h2 id="h-tijden">${esc(t.titel[taal])}</h2>
+  <div class="tijden__grid">
+    <div>
+      <h3>${esc(t.tijdenTitel[taal])}</h3>
+      <table class="tijden__tabel"><caption class="vh">${esc(t.tijdenTitel[taal])}</caption><tbody>${rijen}</tbody></table>
+    </div>
+    <div class="tijden__adres">
+      <h3>${esc(t.adresTitel[taal])}</h3>
+      <p class="adres">${esc(gegevens.naam)}<br>${esc(gegevens.adres.straat)}<br>${esc(gegevens.adres.postcode)} ${esc(gegevens.adres.plaats)}${voorheen}</p>
+      <a class="knop knop--lijn" href="${gegevens.routeLink}" target="_blank" rel="noopener">${icon.pin}${esc(t.routeKnop[taal])}</a>
+      <h3 class="tijden__belkop">${esc(t.belTitel[taal])}</h3>
+      <p class="tijden__tel"><a href="${gegevens.telefoon.link}" class="tel">${esc(gegevens.telefoon.weergave)}</a></p>
+      ${taal === 'en' ? `<p class="tijden__noot">${metBelLink(T(teksten.afhalen.buitenland, taal))}</p>` : ''}
+    </div>
+  </div>
+</div>
+</section>`;
 }
 
-function ophalenHtml(taal) {
-  const o = teksten.ophalen;
-  return `<section class="ophalen" id="ophalen" aria-labelledby="h-ophalen">
-<div class="wrap">
-  <h2 id="h-ophalen">${esc(o.titel[taal])}</h2>
-  <div class="ophalen__grid">
-    <div class="ophalen__blok">
-      <h3>${esc(o.adresTitel[taal])}</h3>
-      <p class="adres">${esc(gegevens.naam)}<br>${esc(gegevens.adres.straat)}<br>${esc(gegevens.adres.postcode)} ${esc(gegevens.adres.plaats)}${gegevens.adres.voorheen ? `<span class="adres__voorheen">(${esc(gegevens.adres.voorheen[taal])})</span>` : ''}</p>
-      <a class="btn btn--rand" href="${gegevens.routeLink}" target="_blank" rel="noopener">${icon.pin}<span>${esc(teksten.routeKnopLang[taal])}</span></a>
-      <p class="ophalen__noot">${esc(o.evenement[taal])}</p>
-    </div>
-    <div class="ophalen__blok">
-      <h3>${esc(o.tijdenTitel[taal])}</h3>
-      ${tijdenTabel(taal)}
-    </div>
-    <div class="ophalen__blok">
-      <h3>${esc(o.belTitel[taal])}</h3>
-      <p class="ophalen__tel"><a href="${gegevens.telefoon.link}" class="tel">${esc(gegevens.telefoon.weergave)}</a></p>
-      ${taal === 'en' ? `<p class="ophalen__noot">${metBelLink(T(teksten.bestellen.buitenland, taal))}</p>` : ''}
-      <p class="ophalen__noot">${esc(teksten.bestellen.niet[taal])}</p>
-    </div>
+function wetenHtml(taal) {
+  const w = teksten.weten;
+  const ids = ['bezorgen', 'reserveren', 'snel', 'halal', 'allergie', 'vegetarisch', 'pepers', 'voetbal', 'betalen'];
+  const vragen = w.vragen[taal]
+    .map(([v, a], i) => `<details class="vraag" id="vraag-${ids[i]}"><summary>${esc(v)}${icon.plus}</summary><p>${metBelLink(vul(a, vast))}</p></details>`)
+    .join('\n');
+  return `<section class="weten" id="goed-om-te-weten" aria-labelledby="h-weten">
+<div class="wrap weten__in">
+  <h2 id="h-weten">${esc(w.titel[taal])}</h2>
+  <div class="vragen">
+${vragen}
   </div>
 </div>
 </section>`;
@@ -365,6 +399,7 @@ function ophalenHtml(taal) {
 function jsonLd(taal) {
   const dagMap = { ma: 'Monday', di: 'Tuesday', wo: 'Wednesday', do: 'Thursday', vr: 'Friday', za: 'Saturday', zo: 'Sunday' };
   const pagina = taal === 'nl' ? gegevens.websiteUrl : `${gegevens.websiteUrl}en/`;
+  const gerechten = alleGerechten(taal);
   const data = {
     '@context': 'https://schema.org',
     '@type': 'Restaurant',
@@ -383,37 +418,39 @@ function jsonLd(taal) {
     servesCuisine: ['Asian', 'Chinese'],
     priceRange: '€',
     acceptsReservations: false,
-    hasMenu: `${pagina}#menu`,
     openingHoursSpecification: gegevens.openingstijden.map((r) => ({
       '@type': 'OpeningHoursSpecification',
       dayOfWeek: r.dagen.map((d) => dagMap[d]),
       opens: r.open,
       closes: r.dicht,
     })),
+    hasMenu: {
+      '@type': 'Menu',
+      url: `${pagina}#menu`,
+      hasMenuSection: categorieen
+        .filter((c) => c.soort === 'raster' || c.soort === 'lijst')
+        .map((c) => ({
+          '@type': 'MenuSection',
+          name: c.naam[taal],
+          hasMenuItem: gerechten
+            .filter((g) => g.categorie === c.id)
+            .map((g) => ({
+              '@type': 'MenuItem',
+              name: `${g.nr}. ${g.naam}`,
+              offers: { '@type': 'Offer', price: g.prijs.toFixed(2), priceCurrency: 'EUR' },
+            })),
+        })),
+    },
   };
   return JSON.stringify(data).replace(/</g, '\\u003c');
 }
 
 function paginaData(taal) {
-  // klein beetje data voor app.js: tijden en de allergie-info per gerecht
-  const gerechten = {};
-  for (const g of alleGerechten) {
-    gerechten[g.nr] = { naam: g.naam[taal], allergenen: g.allergenen ? g.allergenen.map((a) => teksten.allergenen[a][taal]) : null };
-  }
-  const d = teksten.dialoog;
   return JSON.stringify({
-    taal,
     tijden: tijdenPerDag(),
-    gerechten,
     tekst: {
-      onbekend: d.onbekend[taal],
-      bekend: d.bekend[taal],
-      nummer: taal === 'nl' ? 'Nr.' : 'No.',
-      zoekAantal: teksten.menu.zoekAantal[taal],
-      zoekEen: teksten.menu.zoekEen[taal],
-      zoekGeen: T(teksten.menu.zoekGeen, taal),
-      vandaagOpen: teksten.intro.vandaag[taal],
-      dicht: taal === 'nl' ? 'gesloten' : 'closed',
+      vandaagOpen: teksten.hero.vandaag[taal],
+      vandaagDicht: teksten.hero.vandaagDicht[taal],
     },
   }).replace(/</g, '\\u003c');
 }
@@ -423,22 +460,26 @@ function pagina(taal) {
   const anderPad = taal === 'nl' ? 'en/' : '../';
   const ander = taal === 'nl' ? 'en' : 'nl';
   const url = taal === 'nl' ? gegevens.websiteUrl : `${gegevens.websiteUrl}en/`;
-  const intro = teksten.intro;
-  const feiten = intro.feiten[taal].map((f) => `<li>${esc(f)}</li>`).join('');
-  const d = teksten.dialoog;
+  const n = teksten.nav;
+
+  const main = [heroHtml(taal), menuHtml(taal), afhalenHtml(taal), tijdenHtml(taal), wetenHtml(taal)]
+    .join('\n\n')
+    .replaceAll('src="images/', `src="${pre}images/`)
+    .replaceAll(', images/', `, ${pre}images/`)
+    .replaceAll('srcset="images/', `srcset="${pre}images/`);
 
   return `<!doctype html>
 <html lang="${taal}" class="no-js">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(teksten.meta.titel[taal])}</title>
 <meta name="description" content="${esc(T(teksten.meta.beschrijving, taal))}">
 ${PREVIEW ? '<meta name="robots" content="noindex, nofollow">\n' : ''}<link rel="canonical" href="${url}">
 <link rel="alternate" hreflang="nl" href="${gegevens.websiteUrl}">
 <link rel="alternate" hreflang="en" href="${gegevens.websiteUrl}en/">
 <link rel="alternate" hreflang="x-default" href="${gegevens.websiteUrl}">
-<meta name="theme-color" content="#cf0a10">
+<meta name="theme-color" content="#141110">
 <meta property="og:type" content="restaurant">
 <meta property="og:title" content="${esc(gegevens.naam)}">
 <meta property="og:description" content="${esc(T(teksten.meta.beschrijving, taal))}">
@@ -448,6 +489,7 @@ ${PREVIEW ? '<meta name="robots" content="noindex, nofollow">\n' : ''}<link rel=
 <link rel="icon" type="image/png" sizes="48x48" href="${pre}images/favicon-48.png">
 <link rel="apple-touch-icon" href="${pre}images/apple-touch-icon.png">
 <link rel="preload" href="${pre}fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="${pre}fonts/barlow-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="${pre}assets/styles.css?v=${versie}">
 <script>document.documentElement.classList.replace('no-js','js')</script>
 <script type="application/ld+json">${jsonLd(taal)}</script>
@@ -456,79 +498,37 @@ ${PREVIEW ? '<meta name="robots" content="noindex, nofollow">\n' : ''}<link rel=
 <a class="overslaan" href="#menu">${esc(teksten.overslaan[taal])}</a>
 <header class="kop">
   <div class="wrap kop__in">
-    <a class="merk" href="./" aria-label="${esc(gegevens.naam)}">
-      <img src="${pre}images/logo-licht.png" alt="" width="66" height="72">
-      <span class="merk__naam">Asian Kitchen <span>Arena</span></span>
-    </a>
-    <nav class="kop__nav" aria-label="${esc(teksten.nav.label[taal])}">
-      <a href="#menu">${esc(teksten.nav.menu[taal])}</a>
-      <a href="#bestellen">${esc(teksten.nav.bestellen[taal])}</a>
-      <a href="#allergenen">${esc(teksten.nav.allergenen[taal])}</a>
-      <a href="#ophalen">${esc(teksten.nav.ophalen[taal])}</a>
+    <a class="merk" href="./"><img src="${pre}images/woordmerk.png" alt="Asian Kitchen" width="414" height="75"><span class="merk__arena">Arena</span></a>
+    <nav class="kop__nav" aria-label="${esc(n.label[taal])}">
+      <a href="#menu">${esc(n.menu[taal])}</a>
+      <a href="#afhalen">${esc(n.afhalen[taal])}</a>
+      <a href="#tijden">${esc(n.tijden[taal])}</a>
+      <a href="#goed-om-te-weten">${esc(n.weten[taal])}</a>
     </nav>
-    <a class="taal" href="${anderPad}" hreflang="${ander}" lang="${ander}" title="${esc(teksten.taalWissel[taal])}"><span class="vh">${esc(teksten.taalWissel[taal])}: </span>${ander.toUpperCase()}</a>
-    <a class="kop__bel" href="${gegevens.telefoon.link}">${icon.tel}<span>${esc(gegevens.telefoon.weergave)}</span></a>
+    <a class="kop__taal" href="${anderPad}" hreflang="${ander}" lang="${ander}"><span class="vh">${esc(teksten.taalWissel[taal])}: </span>${ander.toUpperCase()}</a>
+    <a class="kop__bel" href="${gegevens.telefoon.link}">${icon.tel}<span class="kop__bel-woord">${esc(teksten.belKort[taal])}</span><span class="kop__bel-nr">${esc(gegevens.telefoon.weergave)}</span></a>
   </div>
 </header>
 
 <main>
-<section class="intro" aria-labelledby="h-intro">
-  <div class="wrap intro__in">
-    <div class="intro__tekst">
-      <h1 id="h-intro">${esc(intro.titel[taal])}</h1>
-      <p class="intro__lead">${esc(intro.lead[taal])}</p>
-      <div class="intro__knoppen">
-        ${belKnop(taal, 'js-belknop')}
-        <a class="btn btn--rand" href="#menu"><span>${esc(teksten.menuKnop[taal])}</span>${icon.pijl}</a>
-      </div>
-      <ul class="intro__feiten">${feiten}</ul>
-      <p class="intro__info">
-        <span class="intro__tijd" data-vandaag>${esc(tijdenKort(taal))}</span>
-        <span class="intro__adres">${esc(gegevens.adres.straat)}, ${esc(gegevens.adres.plaats)} <span class="intro__route">· <a href="${gegevens.routeLink}" target="_blank" rel="noopener">${esc(teksten.routeKnop[taal])}</a></span></span>
-      </p>
-    </div>
-    <img class="intro__foto" src="${pre}images/afhaalbox-760.webp" srcset="${pre}images/afhaalbox-440.webp 440w, ${pre}images/afhaalbox-760.webp 760w" sizes="(min-width: 900px) 380px, 46vw" width="760" height="731" alt="${esc(intro.fotoAlt[taal])}" fetchpriority="high">
-  </div>
-</section>
-
-${bestellenHtml(taal)}
-
-${menuHtml(taal).replaceAll('src="images/', `src="${pre}images/`)}
-
-${allergenenHtml(taal)}
-
-${ophalenHtml(taal)}
+${main}
 </main>
 
 <footer class="voet">
   <div class="wrap voet__in">
-    <img src="${pre}images/logo-donker.png" alt="Asian Kitchen" width="99" height="108" loading="lazy">
-    <div class="voet__tekst">
-      <p><strong>${esc(gegevens.naam)}</strong><br>${esc(adresRegel)}<br><a href="${gegevens.telefoon.link}" class="tel">${esc(gegevens.telefoon.weergave)}</a></p>
+    <img class="voet__logo" src="${pre}images/logo-donker.png" alt="Asian Kitchen" width="110" height="120" loading="lazy">
+    <div class="voet__kol">
+      <p class="voet__naam">${esc(gegevens.naam)}</p>
+      <p>${esc(adresRegel)}<br><a href="${gegevens.telefoon.link}" class="tel">${esc(gegevens.telefoon.weergave)}</a></p>
+    </div>
+    <div class="voet__kol">
       <p>${esc(tijdenKort(taal))}<br>${esc(gegevens.uitzondering[taal])}</p>
-      <p><a href="${pre}${gegevens.menukaartPdf}">${esc(teksten.footer.menukaart[taal])}</a> · <a href="${anderPad}" hreflang="${ander}" lang="${ander}">${esc(teksten.taalNaam[ander])}</a></p>
+    </div>
+    <div class="voet__kol">
+      <p><a href="#menu">${esc(teksten.nav.menu[taal])}</a><br><a href="${anderPad}" hreflang="${ander}" lang="${ander}">${esc(teksten.taalNaam[ander])}</a></p>
     </div>
   </div>
 </footer>
-
-<div class="belbalk">
-  <a href="${gegevens.telefoon.link}">${icon.tel}<span>${esc(teksten.belKnop[taal])}</span><span class="belbalk__nr">${esc(gegevens.telefoon.weergave)}</span></a>
-</div>
-
-<dialog class="dialoog" id="allergie-dialoog" aria-labelledby="dialoog-titel">
-  <div class="dialoog__in">
-    <p class="dialoog__label">${esc(d.titel[taal])}</p>
-    <h2 class="dialoog__titel" id="dialoog-titel"></h2>
-    <p class="dialoog__status"></p>
-    <ul class="dialoog__lijst" hidden></ul>
-    <p>${esc(d.advies[taal])}</p>
-    <p>${esc(d.kruis[taal])}</p>
-    <div class="dialoog__knoppen">
-      <a class="btn btn--bel btn--stapel" href="${gegevens.telefoon.link}">${icon.tel}<span>${esc(teksten.allergenenSectie.belKnop[taal])}</span><span class="btn__nr">${esc(gegevens.telefoon.weergave)}</span></a>
-      <button type="button" class="btn btn--rand dialoog__sluit">${esc(d.sluiten[taal])}</button>
-    </div>
-  </div>
-</dialog>
 
 <script type="application/json" id="pagina-data">${paginaData(taal)}</script>
 <script src="${pre}assets/app.js?v=${versie}" defer></script>
@@ -545,29 +545,41 @@ await rm(OUT, { recursive: true, force: true });
 await mkdir(path.join(OUT, 'en'), { recursive: true });
 await mkdir(path.join(OUT, 'assets'), { recursive: true });
 
-await cp(path.join(ROOT, 'src/images'), path.join(OUT, 'images'), { recursive: true });
-await cp(path.join(ROOT, 'src/fonts'), path.join(OUT, 'fonts'), { recursive: true });
-await cp(path.join(ROOT, 'src/styles.css'), path.join(OUT, 'assets/styles.css'));
-await cp(path.join(ROOT, 'src/app.js'), path.join(OUT, 'assets/app.js'));
-await cp(path.join(ROOT, 'bron/menukaart-origineel.pdf'), path.join(OUT, gegevens.menukaartPdf));
-
-await writeFile(path.join(OUT, 'index.html'), pagina('nl'));
-await writeFile(path.join(OUT, 'en/index.html'), pagina('en'));
-
-await writeFile(
-  path.join(OUT, 'robots.txt'),
-  PREVIEW ? 'User-agent: *\nDisallow: /\n' : `User-agent: *\nAllow: /\n\nSitemap: ${gegevens.websiteUrl}sitemap.xml\n`,
-);
-await writeFile(
-  path.join(OUT, 'sitemap.xml'),
-  `<?xml version="1.0" encoding="UTF-8"?>
+// Alleen deze bestanden gaan naar de site (vaste lijst, geen overblijfselen).
+const AFBEELDINGEN = [
+  'woordmerk.png', 'logo-donker.png', 'favicon-48.png', 'apple-touch-icon.png', 'icon-512.png', 'deelafbeelding.jpg',
+  'nr-22-groot.webp', 'nr-40-groot.webp', 'nr-39-groot.webp',
+  'nr-11.webp', 'nr-13.webp', 'nr-14.webp', 'nr-22.webp', 'nr-39.webp', 'nr-40.webp',
+  'afhaalbox-440.webp', 'afhaalbox-760.webp',
+];
+const LETTERS = ['barlow-condensed-700.woff2', 'barlow-400.woff2', 'barlow-600.woff2', 'OFL.txt'];
+await mkdir(path.join(OUT, 'images'));
+await mkdir(path.join(OUT, 'fonts'));
+await Promise.all([
+  ...AFBEELDINGEN.map((f) => cp(path.join(ROOT, 'src/images', f), path.join(OUT, 'images', f))),
+  ...LETTERS.map((f) => cp(path.join(ROOT, 'src/fonts', f), path.join(OUT, 'fonts', f))),
+  cp(path.join(ROOT, 'src/styles.css'), path.join(OUT, 'assets/styles.css')),
+  cp(path.join(ROOT, 'src/app.js'), path.join(OUT, 'assets/app.js')),
+  writeFile(path.join(OUT, 'index.html'), pagina('nl')),
+  writeFile(path.join(OUT, 'en/index.html'), pagina('en')),
+  writeFile(
+    path.join(OUT, 'robots.txt'),
+    PREVIEW ? 'User-agent: *\nDisallow: /\n' : `User-agent: *\nAllow: /\n\nSitemap: ${gegevens.websiteUrl}sitemap.xml\n`,
+  ),
+  writeFile(
+    path.join(OUT, 'sitemap.xml'),
+    `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${gegevens.websiteUrl}</loc></url>
   <url><loc>${gegevens.websiteUrl}en/</loc></url>
 </urlset>
 `,
-);
+  ),
+]);
 
 const bestanden = await readdir(OUT, { recursive: true });
-console.log(`Klaar: ${alleGerechten.length} gerechten, ${extras.vervangen.length + extras.erbij.length} extra's, ${dranken.items.length} drankregels.`);
+const g = alleGerechten('nl');
+const extras = categorieen.find((c) => c.id === 'extras');
+const dranken = categorieen.find((c) => c.id === 'dranken');
+console.log(`Klaar: ${g.length} gerechten, ${extras.vervangen.length + extras.erbij.length} extra's, ${dranken.items.length} drankregels.`);
 console.log(`${bestanden.length} bestanden in ${path.relative(ROOT, OUT) || '.'}${PREVIEW ? ' (preview: niet indexeren)' : ''}`);

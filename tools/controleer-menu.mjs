@@ -49,14 +49,26 @@ for (const taal of ['nl', 'en']) {
   const bestand = path.join(SITE, taal === 'nl' ? 'index.html' : 'en/index.html');
   const html = await readFile(bestand, 'utf8');
 
-  // gerechten
+  // gerechten: elk gerecht (rij in een lijst of vakje in een raster) heeft data-nr en data-prijs,
+  // en de zichtbare (of voor schermlezers voorgelezen) prijs moet daarmee kloppen.
   const gerechten = {};
-  for (const m of html.matchAll(/<li class="dish[^"]*" id="nr-([^"]+)"[\s\S]*?<\/li>/g)) {
-    const blok = m[0];
-    const prijs = prijsUit(blok.match(/class="dish__prijs">([^<]+)</)[1]);
-    const pepers = (blok.match(/class="i i--peper"/g) || []).length;
-    const vega = blok.includes('tag--vegetarisch');
-    gerechten[m[1]] = { prijs, pepers, vega, halal: blok.includes('tag--halal-kip'), varken: blok.includes('tag--varkensvlees') };
+  const gerechtRe = /<(li|td) class="gerecht[^"]*" id="nr-[^"]+" data-nr="([^"]+)" data-prijs="([^"]+)" data-peper="(\d)" data-labels="([^"]*)"[^>]*>([\s\S]*?)<\/\1>/g;
+  for (const [, soort, nr, dataPrijs, peper, labels, inhoud] of html.matchAll(gerechtRe)) {
+    const prijsTekst = soort === 'li' ? inhoud.match(/class="rij__prijs">([^<]+)</)[1] : inhoud.match(/class="vh">([^<]+)</)[1];
+    const tekstPrijs = prijsUit(prijsTekst);
+    if (Number(dataPrijs) !== tekstPrijs) fout(`[${taal}] nr. ${nr}: getoonde prijs ${tekstPrijs} wijkt af van ${dataPrijs}`);
+    if (gerechten[nr]) fout(`[${taal}] nr. ${nr} staat twee keer op de site`);
+    const l = labels.split(' ');
+    // pepers: in een lijst als label bij het gerecht, in een raster bij de saus (zie hieronder)
+    const pepers = soort === 'li' ? (inhoud.match(/class="i i--peper"/g) || []).length : Number(peper);
+    gerechten[nr] = { prijs: tekstPrijs, pepers, vega: l.includes('vegetarisch'), halal: l.includes('halal-kip'), varken: l.includes('varkensvlees') };
+  }
+  // raster: de zichtbare pepers in de rijkop moeten kloppen met elk nummer in die rij
+  for (const [, kop, cellen] of html.matchAll(/<tr><th scope="row">([\s\S]*?)<\/th>([\s\S]*?)<\/tr>/g)) {
+    const zichtbaar = (kop.match(/class="i i--peper"/g) || []).length;
+    for (const [, nr, peper] of cellen.matchAll(/data-nr="([^"]+)" data-prijs="[^"]+" data-peper="(\d)"/g)) {
+      if (Number(peper) !== zichtbaar) fout(`[${taal}] nr. ${nr}: ${zichtbaar} pepers zichtbaar in de rij, data zegt ${peper}`);
+    }
   }
   const nrsSite = Object.keys(gerechten);
   const nrsPdf = Object.keys(PDF);
@@ -79,7 +91,7 @@ for (const taal of ['nl', 'en']) {
   ok.push(`[${taal}] ${nrsSite.length} gerechten, nummers en prijzen gelijk aan de pdf`);
 
   // extra's
-  const extrasBlok = html.match(/<section class="cat cat--extras"[\s\S]*?<\/section>/)[0];
+  const extrasBlok = html.match(/<section class="paneel paneel--extras"[\s\S]*?<\/section>/)[0];
   const extras = [...extrasBlok.matchAll(/class="extra__prijs">([^<]+)</g)].map((m) => prijsUit(m[1]));
   if (JSON.stringify(extras) !== JSON.stringify(PDF_EXTRAS)) fout(`[${taal}] extra's: ${extras} ≠ pdf ${PDF_EXTRAS}`);
   const ruilBlok = extrasBlok.match(/extras__blok--ruil[\s\S]*?<\/div>/)[0];
@@ -87,7 +99,7 @@ for (const taal of ['nl', 'en']) {
   ok.push(`[${taal}] ${extras.length} extra's gelijk aan de pdf (ruilen + € 2,50 apart)`);
 
   // dranken
-  const drankBlok = html.match(/<section class="cat cat--dranken"[\s\S]*?<\/section>/)[0];
+  const drankBlok = html.match(/<section class="paneel paneel--dranken"[\s\S]*?<\/section>/)[0];
   const dranken = [...drankBlok.matchAll(/class="extra__prijs">([^<]+)</g)].map((m) => prijsUit(m[1]));
   if (JSON.stringify(dranken) !== JSON.stringify(PDF_DRANKEN)) fout(`[${taal}] dranken: ${dranken} ≠ pdf ${PDF_DRANKEN}`);
   ok.push(`[${taal}] ${dranken.length} drankregels gelijk aan de pdf`);
@@ -107,8 +119,8 @@ for (const taal of ['nl', 'en']) {
   if (html.includes('21:00')) fout(`[${taal}] oude sluitingstijd 21:00 staat nog op de site`);
   ok.push(`[${taal}] ${tel.length} tel-links naar +31203657971, adres, routelink en openingstijden kloppen`);
 
-  // verboden onderdelen
-  for (const woord of ['winkelmand', 'shopping cart', 'checkout', 'inloggen', 'log in', 'bezorgkosten']) {
+  // verboden onderdelen en beweringen die de zaak niet heeft bevestigd
+  for (const woord of ['winkelmand', 'shopping cart', 'checkout', 'inloggen', 'log in', 'bezorgkosten', '<form', 'open keuken', 'open kitchen', 'feestdag', 'kung pao', '<dialog', '.pdf']) {
     if (html.toLowerCase().includes(woord)) fout(`[${taal}] bevat '${woord}'`);
   }
 }

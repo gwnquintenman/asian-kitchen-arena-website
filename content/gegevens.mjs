@@ -34,7 +34,4 @@ export default {
 
   // Adres van de echte website (voor zoekmachines en deel-links). Eindigt op een /.
   websiteUrl: 'https://www.asiankitchen.nl/Arena/',
-
-  // De originele menukaart (staat in src/), wordt als extra download aangeboden.
-  menukaartPdf: 'menukaart-asian-kitchen-arena.pdf',
 };
