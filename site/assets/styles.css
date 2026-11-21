@@ -652,122 +652,6 @@ h2 {
   white-space: nowrap;
 }
 
-/* raster: nummers per saus en soort vlees */
-.raster-blok {
-  margin-top: 1.25rem;
-  display: grid;
-  gap: 1.5rem;
-}
-.raster {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-.raster th,
-.raster td {
-  padding: 0.7rem 0.3rem;
-  border-bottom: 1px solid var(--lijn);
-  vertical-align: middle;
-}
-.raster thead th {
-  border-bottom: 3px solid var(--inkt);
-  padding-top: 0;
-  vertical-align: bottom;
-  text-align: center;
-  font-weight: 400;
-}
-.raster thead .raster__hoek {
-  text-align: left;
-  font: 700 1rem/1 var(--kop);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--grijs);
-}
-.raster__kol {
-  display: block;
-  font: 700 1.2rem/1.05 var(--kop);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-.raster__prijs {
-  display: block;
-  margin-top: 0.2rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.raster__halal {
-  display: block;
-  margin-top: 0.15rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--groen);
-}
-.raster tbody th {
-  text-align: left;
-  font-weight: 600;
-  line-height: 1.25;
-}
-.raster__rijnaam {
-  margin-right: 0.35rem;
-}
-.raster td {
-  text-align: center;
-}
-.raster__nr {
-  display: inline-grid;
-  place-items: center;
-  min-width: 2.7rem;
-  height: 2.7rem;
-  padding: 0 0.3rem;
-  border: 2px solid var(--rood);
-  border-radius: 999px;
-  background: var(--wit);
-  font: 700 1.35rem/1 var(--kop);
-}
-.raster__rijprijs {
-  font-weight: 600;
-  white-space: nowrap;
-}
-.raster-wrap {
-  /* vangnet: een te brede tabel schuift binnen zijn eigen vak, nooit de hele pagina */
-  overflow-x: auto;
-}
-.raster tbody th {
-  hyphens: auto;
-}
-/* smalle telefoons: compacter raster zodat alles in de breedte past */
-@media (max-width: 419px) {
-  .raster th,
-  .raster td {
-    padding-left: 0.15rem;
-    padding-right: 0.15rem;
-  }
-  .raster__kol {
-    font-size: 1.02rem;
-  }
-  .raster__prijs,
-  .raster__rijprijs {
-    font-size: 0.92rem;
-  }
-  .raster tbody th {
-    font-size: 0.95rem;
-  }
-  .raster__nr {
-    min-width: 2.35rem;
-    height: 2.35rem;
-    font-size: 1.2rem;
-  }
-}
-
-.peper {
-  display: inline-flex;
-  vertical-align: -0.15em;
-  color: var(--rood);
-}
-.peper .i + .i {
-  margin-left: -0.35em;
-}
-
 /* gerechtfoto met rode Nr.-stip, zoals op de menukaart */
 .gerechtfoto {
   position: relative;
@@ -780,16 +664,6 @@ h2 {
   right: -0.25rem;
   bottom: -0.25rem;
 }
-.gerechtfoto--raster {
-  max-width: 260px;
-  justify-self: center;
-}
-.gerechtfoto--raster .badge {
-  width: 3.2rem;
-  height: 3.2rem;
-  font-size: 1.3rem;
-}
-
 /* lijsten met stippellijn naar de prijs, zoals een menukaart */
 .lijst {
   border-top: 1px solid var(--lijn);
@@ -862,26 +736,38 @@ h2 {
 .tag {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.15rem 0.55rem;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  border: 1px solid #d8ccc0;
+  border: 1.5px solid #cfc3b8;
   background: var(--wit);
-  font-size: 0.85rem;
+  color: var(--inkt);
+  font-size: 0.88rem;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 .tag .i {
-  width: 1em;
-  height: 1em;
+  width: 1.05em;
+  height: 1.05em;
 }
+/* halal: donker vlak, wit vinkje */
+.tag--halal-kip {
+  background: var(--inkt);
+  border-color: var(--inkt);
+  color: var(--wit);
+}
+/* vegetarisch: groen met blaadje */
 .tag--vegetarisch {
-  color: var(--groen);
-  border-color: #bfd8c6;
+  background: #e4f2e8;
+  border-color: #9fcdae;
+  color: #1d5c31;
 }
+/* pittig: rood met pepers */
 .tag--peper {
+  background: #fde9e8;
+  border-color: #f0b3ae;
   color: var(--rood-donker);
-  border-color: #f0c4c1;
 }
 .tag--peper .i + .i {
   margin-left: -0.35em;
@@ -890,6 +776,32 @@ h2 {
   color: var(--rood);
 }
 
+/* uitleg van de labels boven het menu */
+.legenda {
+  margin-top: 1.1rem;
+  display: grid;
+  gap: 0.55rem 2rem;
+  max-width: 860px;
+}
+.legenda li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+}
+.legenda__tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.legenda__uitleg {
+  color: var(--grijs);
+  font-size: 0.95rem;
+}
+
+.groep:first-of-type {
+  margin-top: 1.5rem;
+}
 .groep + .groep {
   margin-top: 2rem;
 }
@@ -1205,11 +1117,6 @@ h2 {
     grid-template-columns: 1fr 1fr;
     align-items: start;
   }
-  .raster th,
-  .raster td {
-    padding-left: 0.6rem;
-    padding-right: 0.6rem;
-  }
   .voet__in {
     grid-template-columns: auto 1fr 1fr 1fr;
     align-items: start;
@@ -1269,16 +1176,14 @@ h2 {
     padding-left: 0;
     padding-right: 0;
   }
-  .raster-wrap {
-    max-width: 680px;
-  }
-  .raster-blok--foto {
-    grid-template-columns: minmax(0, 680px) 280px;
-    align-items: center;
-    gap: 4rem;
-  }
-  .gerechtfoto--raster {
+  .legenda {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem 1.75rem;
     max-width: none;
+  }
+  .legenda li {
+    flex-direction: column;
+    align-items: flex-start;
   }
   .panelen .lijst,
   .panelen .groep,

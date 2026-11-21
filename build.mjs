@@ -106,18 +106,38 @@ const icon = {
   pijl: '<svg class="i i--pijl" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v14m0 0-6-6m6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   peper: '<svg class="i i--peper" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 6.2c1.6.2 3 1.6 3.1 3.4.3 4.6-5.4 11-13.6 11.9-1 .1-1.2-1.1-.3-1.4 5.3-1.9 7.6-6.3 8.4-10.7.3-1.9 1.1-3.4 2.4-3.2z" fill="currentColor"/><path d="M16 6.3c.1-1.6.9-2.9 2.6-3.5" fill="none" stroke="#2f7a3b" stroke-width="1.8" stroke-linecap="round"/></svg>',
   blad: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4C9 4 4 9.5 4 16c0 1.4.3 2.6.8 3.6C7 13 11 10 15 8.5c-4 2.3-7 6-8.6 11.2 1 .5 2.1.8 3.4.8C16.5 20.5 20 14 20 4z" fill="currentColor"/></svg>',
-  plus: '<svg class="i i--plus" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+  halal: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="m8 12.3 2.6 2.6L16.2 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  plus: '<svg class="i i--plus"viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
 };
 
-function pepers(n, taal) {
-  if (!n) return '';
-  return `<span class="peper" title="${esc(teksten.labels['peper' + n][taal])}">${icon.peper.repeat(n)}<span class="vh">${esc(teksten.labels['peper' + n][taal])}</span></span>`;
+// label = tekst + eigen kleur + eigen icoon (nooit alleen kleur)
+const labelIcoon = { 'halal-kip': () => icon.halal, vegetarisch: () => icon.blad, varkensvlees: () => '' };
+
+function tag(l, taal) {
+  return `<span class="tag tag--${l}">${labelIcoon[l]()}${esc(teksten.labels[l][taal])}</span>`;
+}
+function pepertag(n, taal) {
+  return `<span class="tag tag--peper">${icon.peper.repeat(n)}${esc(teksten.labels['peper' + n][taal])}</span>`;
 }
 
 function tags(labels, peper, taal) {
-  const uit = labels.map((l) => `<span class="tag tag--${l}">${l === 'vegetarisch' ? icon.blad : ''}${esc(teksten.labels[l][taal])}</span>`);
-  if (peper) uit.push(`<span class="tag tag--peper">${icon.peper.repeat(peper)}${esc(teksten.labels['peper' + peper][taal])}</span>`);
+  const uit = labels.map((l) => tag(l, taal));
+  if (peper) uit.push(pepertag(peper, taal));
   return uit.join('');
+}
+
+// uitleg van de labels, boven het menu
+function legendaHtml(taal) {
+  const L = teksten.menu.legenda;
+  const items = [
+    [tag('halal-kip', taal), L.halal[taal]],
+    [tag('vegetarisch', taal), L.vegetarisch[taal]],
+    [pepertag(1, taal) + ' ' + pepertag(2, taal), L.pittig[taal]],
+    [tag('varkensvlees', taal), L.varkensvlees[taal]],
+  ];
+  return `<ul class="legenda" aria-label="${esc(L.titel[taal])}">${items
+    .map(([t, uitleg]) => `<li><span class="legenda__tags">${t}</span><span class="legenda__uitleg">${esc(uitleg)}</span></li>`)
+    .join('')}</ul>`;
 }
 
 // ---------- menu: onderdelen ----------
@@ -137,49 +157,6 @@ function foto(bestand, nr, naam, taal, klasse = '') {
   <img src="images/${bestand}" alt="${esc(T(teksten.menu.fotoAlt, taal, { nr, naam }))}" loading="lazy" decoding="async" width="360" height="300">
   <span class="badge" aria-hidden="true"><small>${esc(teksten.menu.nummer[taal])}</small>${esc(nr)}</span>
 </figure>`;
-}
-
-function rasterHtml(c, taal) {
-  const prijsPerRij = c.rijen.some((r) => r.prijs);
-  const kop = c.kolommen
-    .map((k) => {
-      const halal = k.labels?.includes('halal-kip') ? `<span class="raster__halal">${esc(teksten.labels.halalKort[taal])}</span>` : '';
-      const p = k.prijs ? `<span class="raster__prijs">${prijs(k.prijs, taal)}</span>` : '';
-      return `<th scope="col"><span class="raster__kol">${esc(k.naam[taal])}</span>${p}${halal}</th>`;
-    })
-    .join('');
-  const rijen = c.rijen
-    .map((rij) => {
-      const cellen = c.kolommen
-        .map((k) => {
-          const nr = rij.nrs[k.id];
-          const p = rij.prijs ?? k.prijs;
-          const naam = c.gerechtNaam[taal](rij, k);
-          const labels = [...(rij.labels ?? []), ...(k.labels ?? [])];
-          return `<td class="gerecht" id="nr-${esc(nr)}" data-nr="${esc(nr)}" data-prijs="${p}" data-peper="${rij.peper ?? 0}" data-labels="${labels.join(' ')}"><span class="raster__nr">${esc(nr)}</span><span class="vh">${esc(naam)}, ${prijs(p, taal)}</span></td>`;
-        })
-        .join('');
-      const halal = rij.labels?.includes('halal-kip') ? `<span class="raster__halal">${esc(teksten.labels.halalKort[taal])}</span>` : '';
-      const rijPrijs = prijsPerRij ? `<td class="raster__rijprijs">${prijs(rij.prijs, taal)}</td>` : '';
-      return `<tr><th scope="row"><span class="raster__rijnaam">${esc(rij.naam[taal])}</span>${pepers(rij.peper, taal)}${halal}</th>${cellen}${rijPrijs}</tr>`;
-    })
-    .join('\n');
-  const prijsKop = prijsPerRij ? `<th scope="col"><span class="raster__kol">${taal === 'nl' ? 'Prijs' : 'Price'}</span></th>` : '';
-  const fotoHtml = c.foto
-    ? foto(c.foto.bestand, c.foto.nr, alleGerechten(taal).find((g) => g.nr === c.foto.nr).naam, taal, 'gerechtfoto--raster')
-    : '';
-  return `<div class="raster-blok${c.foto ? ' raster-blok--foto' : ''}">
-<div class="raster-wrap">
-<table class="raster raster--${c.kolommen.length + (prijsPerRij ? 1 : 0)}">
-<caption class="vh">${esc(c.naam[taal])}: ${esc(teksten.menu.rasterUitleg[taal])}</caption>
-<thead><tr><th scope="col" class="raster__hoek">${esc(c.rijKop[taal])}</th>${kop}${prijsKop}</tr></thead>
-<tbody>
-${rijen}
-</tbody>
-</table>
-</div>
-${fotoHtml}
-</div>`;
 }
 
 function rijHtml(g, taal) {
@@ -261,7 +238,7 @@ function drankenHtml(c, taal) {
 
 function paneelHtml(c, taal, i) {
   const inhoud =
-    c.soort === 'raster' ? rasterHtml(c, taal) : c.soort === 'lijst' ? lijstHtml(c, taal) : c.soort === 'extras' ? extrasHtml(c, taal) : drankenHtml(c, taal);
+    c.soort === 'lijst' ? lijstHtml(c, taal) : c.soort === 'extras' ? extrasHtml(c, taal) : drankenHtml(c, taal);
   const intro = c.intro ? `<p class="paneel__intro">${esc(c.intro[taal])}</p>` : '';
   return `<section class="paneel paneel--${c.soort}" id="paneel-${c.id}" data-paneel="${c.id}" aria-labelledby="titel-${c.id}"${i === 0 ? '' : ' data-start-verborgen'}>
 <h3 class="paneel__titel" id="titel-${c.id}">${esc(c.naam[taal])}</h3>
@@ -322,6 +299,7 @@ function menuHtml(taal) {
     <h2 id="h-menu">${esc(m.titel[taal])}</h2>
     <p class="sectiekop__tekst">${esc(m.uitleg[taal])}</p>
     <p class="menu__meta">${esc(m.allergie[taal])} <a href="#vraag-allergie">${esc(m.allergieLink[taal])}</a></p>
+    ${legendaHtml(taal)}
   </div>
   <div class="tabs js-only" role="tablist" aria-label="${esc(m.tabsLabel[taal])}">${tabs}</div>
   <div class="panelen">
@@ -428,7 +406,7 @@ function jsonLd(taal) {
       '@type': 'Menu',
       url: `${pagina}#menu`,
       hasMenuSection: categorieen
-        .filter((c) => c.soort === 'raster' || c.soort === 'lijst')
+        .filter((c) => c.soort === 'lijst')
         .map((c) => ({
           '@type': 'MenuSection',
           name: c.naam[taal],
@@ -549,7 +527,6 @@ await mkdir(path.join(OUT, 'assets'), { recursive: true });
 const AFBEELDINGEN = [
   'woordmerk.png', 'logo-donker.png', 'favicon-48.png', 'apple-touch-icon.png', 'icon-512.png', 'deelafbeelding.jpg',
   'nr-22-groot.webp', 'nr-40-groot.webp', 'nr-39-groot.webp',
-  'nr-22.webp',
   'afhaalbox-440.webp', 'afhaalbox-760.webp',
 ];
 const LETTERS = ['barlow-condensed-700.woff2', 'barlow-400.woff2', 'barlow-600.woff2', 'OFL.txt'];

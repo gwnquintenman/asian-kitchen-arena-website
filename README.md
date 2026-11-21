@@ -18,8 +18,9 @@ reserveren, inloggen, contactformulier of menukaart-download. Wie wil bestellen,
 
 1. **Bovenkant** (donker, zoals de zwarte menukaart): wat je er haalt, belknop, "vandaag open",
    uitgesneden gerechtfoto's met de rode Nr.-stippen van de menukaart.
-2. **Menu** in tabbladen. Noedels & nasi en de wokgerechten staan in een raster: zoek je saus op
-   en kijk in de kolom van kip, rundvlees of garnalen voor het nummer.
+2. **Menu** in tabbladen. Elk gerecht staat op dezelfde manier: nummer, naam, prijs, wat erbij zit
+   en duidelijke labels (halal kip, vegetarisch, pittig, varkensvlees). Boven het menu staat wat de
+   labels betekenen. Wokgerechten zijn ingedeeld per kip, rundvlees en garnalen.
 3. **Bestellen en afhalen**: in vier stappen, geen bezorging.
 4. **Openingstijden en adres**, met de dag van vandaag gemarkeerd en een routeknop.
 5. **Goed om te weten**: bezorgen, reserveren, halal, allergie, vegetarisch, pepers, voetbal, betalen.
@@ -38,8 +39,8 @@ reserveren, inloggen, contactformulier of menukaart-download. Wie wil bestellen,
 
 Voorbeelden (let op: een punt, geen komma):
 - Prijs van nr. 15 naar € 20,00: zoek `gerecht('15', 19.5,` en maak er `gerecht('15', 20.0,` van.
-- Alle wokgerechten met kip naar € 14,00: zoek bij `id: 'kip'` het stukje `prijs: 13.5` en maak er
-  `prijs: 14.0` van. In het raster geldt de prijs per kolom (kip, rundvlees, garnalen).
+- Wokgerecht nr. 19 naar € 14,00: zoek `gerecht('19', 13.5,` en maak er `gerecht('19', 14.0,` van.
+  (Elk gerecht heeft zijn eigen prijs; verandert een hele groep, pas dan elke regel van die groep aan.)
 
 **Na elke aanpassing:** dubbelklik `bouw.cmd`. Dat maakt de map `site/` opnieuw en controleert
 het menu tegen de pdf. Staat er "Alles klopt.", dan is het goed. Als de menukaart zelf verandert

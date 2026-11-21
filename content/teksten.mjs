@@ -67,18 +67,19 @@ export default {
       en: 'For no. {nrs}: egg noodles or egg fried rice instead of white rice is + {prijs}.',
     },
     alleExtras: { nl: "Alle extra's", en: 'All add-ons' },
-    fotoBijschrift: { nl: 'Op de foto: nr. {nr}', en: 'Pictured: no. {nr}' },
     fotoAlt: { nl: 'Foto van nr. {nr}, {naam}', en: 'Photo of no. {nr}, {naam}' },
-    rasterUitleg: {
-      nl: 'Zoek je saus op en kijk in de kolom van kip, rundvlees of garnalen. Daar staat het nummer.',
-      en: 'Find your sauce, then look in the chicken, beef or shrimp column for the number.',
-    },
     allergenenLabel: { nl: 'Allergenen', en: 'Allergens' },
+    legenda: {
+      titel: { nl: 'Uitleg van de labels', en: 'What the labels mean' },
+      halal: { nl: 'Alle kip die we gebruiken is halal.', en: 'All the chicken we use is halal.' },
+      vegetarisch: { nl: 'Vegetarisch volgens onze menukaart, niet automatisch veganistisch.', en: 'Vegetarian according to our menu, not automatically vegan.' },
+      pittig: { nl: 'Het aantal pepers op onze menukaart.', en: 'The number of peppers on our printed menu.' },
+      varkensvlees: { nl: 'Dit gerecht bevat varkensvlees.', en: 'This dish contains pork.' },
+    },
   },
 
   labels: {
     'halal-kip': { nl: 'Kip is halal', en: 'Halal chicken' },
-    halalKort: { nl: 'halal', en: 'halal' },
     vegetarisch: { nl: 'Vegetarisch', en: 'Vegetarian' },
     varkensvlees: { nl: 'Met varkensvlees', en: 'Contains pork' },
     peper1: { nl: 'Pittig', en: 'Spicy' },

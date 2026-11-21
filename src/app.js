@@ -159,19 +159,20 @@
   volgHash(location.hash, true);
 
   // ---------- foto's bewegen mee met het scrollen ----------
-  // Bovenaan: alle drie de gerechten gaan mee omhoog, de doosjes iets sneller dan het bord (diepte), en het bord
-  // draait langzaam. We meten de houder (die zelf niet beweegt) en zetten alleen 'transform' op de foto.
+  // Bovenaan waaieren de gerechten uit elkaar: nr. 40 (boven) gaat het snelst omhoog, het bord (midden) minder,
+  // nr. 39 (onder) het minst. Zo wordt de ruimte ertussen groter in plaats van dat ze over elkaar schuiven.
+  // Het bord draait langzaam. We meten de houder (die zelf niet beweegt) en zetten alleen 'transform'.
   // px / draai = verschuiving en graden per schermhoogte gescrold. Bij het laden staat alles op 0.
   var lagen = [];
   var heroFotos = document.querySelector('.hero__fotos');
   if (heroFotos) {
     [
       // selector, px (breed scherm), px (smal scherm), draai, draai van alleen de foto (het bord draait, het
-      // Nr.-rondje niet). Op een smal scherm staan de foto's ONDER de tekst: daar blijft nr. 40 (bovenaan)
-      // iets achter, zodat geen enkele foto over de tekst schuift.
-      ['.hf--40', 130, -40, -6, 0],
-      ['.hf--22', 50, 20, 0, 20],
-      ['.hf--39', 190, 110, 7, 0],
+      // Nr.-rondje niet). Op een smal scherm staan de foto's ONDER de tekst: daar gaat niets omhoog
+      // (dan zou het over de tekst schuiven); het bord en nr. 39 blijven juist iets achter, ook uit elkaar.
+      ['.hf--40', 150, 0, -5, 0],
+      ['.hf--22', 85, -12, 0, 18],
+      ['.hf--39', 25, -35, 5, 0],
     ].forEach(function (l) {
       var el = heroFotos.querySelector(l[0]);
       if (el) lagen.push({ el: el, houder: heroFotos, px: l[1], pxSmal: l[2], draai: l[3], img: l[4] ? el.querySelector('img') : null, imgDraai: l[4] });
@@ -230,13 +231,14 @@
     });
 
     if (bakje && bakjeBoven < vh + 100 && bakjeBoven + bakjeHoog > -100) {
-      // 0 = bovenkant van het bakje komt net onderin beeld, 1 = midden van het bakje op 55 % van de schermhoogte
+      // 0 = bovenkant van het bakje komt net onderin beeld, 1 = midden van het bakje op 35 % van de schermhoogte.
+      // Een lange scrollafstand en een zachte curve: het bakje schuift rustig binnen.
       var start = vh;
-      var eind = vh * 0.55 - bakjeHoog / 2;
+      var eind = vh * 0.35 - bakjeHoog / 2;
       var p = Math.max(0, Math.min(1, (start - bakjeBoven) / (start - eind)));
-      var rest = Math.pow(1 - p, 3); // ease-out: snel binnen, rustig op zijn plek
+      var rest = (1 - p) * (1 - p); // zachte ease-out
       bakje.style.transform =
-        'translate3d(' + (-rest * bakjeAfstand).toFixed(1) + 'px,0,0) rotate(' + (-rest * 14).toFixed(2) + 'deg)';
+        'translate3d(' + (-rest * bakjeAfstand).toFixed(1) + 'px,0,0) rotate(' + (-rest * 10).toFixed(2) + 'deg)';
     }
   }
   function plan() {
